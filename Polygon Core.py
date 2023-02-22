@@ -16,8 +16,9 @@ font = pygame.font.SysFont("Monospace" , 24 , bold = False)
 
 #Here We Compile The Triangle Rasterization Algorithm, This Makes It Super Duper Fast!
 #The Reason For Compiling This Is That It's Non-Dependant On Any Library, AKA Pure Computation
-@jit(parallel=False, nogil=True, cache=True, nopython=True, fastmath=True)
+@jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def process_triangle(ts, image_buffer, screen_buffer):
+	#Here We Change The World Space Coordinates To Screen Space Coordinates, We Use World Space To Ensure Rendering Will Be Consistent Across All Resolutions
 	screen = (
 		(((ts[0][0] * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts[0][1] + 1) * screen_buffer.shape[1]) / 2),
 		(((ts[1][0] * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts[1][1] + 1) * screen_buffer.shape[1]) / 2),
@@ -45,6 +46,7 @@ def process_triangle(ts, image_buffer, screen_buffer):
 			if s > 0 and t > 0 and s + t <= 1:
 				w = (1 - s - t)
 
+				#Thanks To The Barycentric Coordinates, We Could Interpolate Colour Values Between Every Point
 				r = int(w * 255 + s * 0 + t * 0)
 				g = int(w * 0 + s * 255 + t * 0)
 				b = int(w * 0 + s * 0 + t * 255)
@@ -53,8 +55,8 @@ def process_triangle(ts, image_buffer, screen_buffer):
 					screen_buffer[x][y] = (r << 16) + (g << 8) + b
 				else:
 					#We Get The Color Coordinates From The Image Buffer
-					uvx = int((w * 0 + s * 1 + t * 1) * image_buffer.shape[0])
-					uvy = int((w * 0 + s * 0 + t * 1) * image_buffer.shape[1])
+					uvx = int((w * 0 + s * .5 + t * .5) * image_buffer.shape[0])
+					uvy = int((w * 0 + s * 0 + t * .5) * image_buffer.shape[1])
 
 					#Here We Convert To RGB To Implement Additive Mixing
 					uvr = ((image_buffer[uvx][uvy] >> 16) & 0xff)
@@ -66,15 +68,18 @@ def process_triangle(ts, image_buffer, screen_buffer):
 					final_g = int((uvg * g) / 255)
 					final_b = int((uvb * b) / 255)
 
+					#Here We Convert The RGB Value To A Color Integer, Then It Is Assigned To The Screen Buffer
 					screen_buffer[x][y] = (final_r << 16) + (final_g << 8) + final_b
 
-@jit(parallel=False, nogil=True, cache=True, nopython=True, fastmath=True)
+@jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def clamp(num, min_value, max_value):
    return max(min(num, max_value), min_value)
 
+#Here We Render The Final Image On To The Screen
 def render_flip(screen_buffer, clear = False):
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 
+	#This Will Clear Everything & Avoid The Ghost Effect, This Should Not Be Used In Closed Rooms As It Is A Waste Of Processing
 	if clear:
 		screen_buffer.fill(0)
 
@@ -100,9 +105,9 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	triangle_1 = ((triangle_1[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 64, triangle_1[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 64),
-	(triangle_1[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 64, triangle_1[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 64),
-	(triangle_1[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 64, triangle_1[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 64))
+	triangle_1 = ((triangle_1[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 128, triangle_1[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 128),
+	(triangle_1[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 128, triangle_1[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 128),
+	(triangle_1[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 128, triangle_1[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 128))
 
 	start = time.time()
 
