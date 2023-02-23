@@ -1,9 +1,8 @@
-from numba import njit, cuda, jit, vectorize, prange, config, threading_layer, float32
+from numba import jit, float32
 from numba.experimental import jitclass
 import numpy as np
-import sys
-import time
 import pygame
+import typing
 
 #config.THREADING_LAYER = 'threadsafe'
 
@@ -14,30 +13,61 @@ pygame.init()
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold = False)
 
+@jitclass
+class Vertex:
+	x: float
+	y: float
+	z: float
+
+	def __init__(self, x: float, y: float, z: float = 0):
+		self.x = x
+		self.y = y
+		self.z = z
+
+@jitclass
+class Triangle:
+	v1: Vertex
+	v2: Vertex
+	v3: Vertex
+
+	def __init__(self, v1: Vertex, v2: Vertex, v3: Vertex):
+		self.v1 = v1
+		self.v2 = v2
+		self.v3 = v3
+
+	def translate(self, move_vector: Vertex):
+		self.v1.x += move_vector.x
+		self.v2.x += move_vector.x
+		self.v3.x += move_vector.x
+
+		self.v1.y += move_vector.y
+		self.v2.y += move_vector.y
+		self.v3.y += move_vector.y
+
 #Here We Compile The Triangle Rasterization Algorithm, This Makes It Super Duper Fast!
 #The Reason For Compiling This Is That It's Non-Dependant On Any Library, AKA Pure Computation
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
-def process_triangle(ts, image_buffer, screen_buffer):
+def process_triangle(ts: Triangle, image_buffer, screen_buffer):
 	#Here We Change The World Space Coordinates To Screen Space Coordinates, We Use World Space To Ensure Rendering Will Be Consistent Across All Resolutions
-	screen = (
-		(((ts[0][0] * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts[0][1] + 1) * screen_buffer.shape[1]) / 2),
-		(((ts[1][0] * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts[1][1] + 1) * screen_buffer.shape[1]) / 2),
-		(((ts[2][0] * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts[2][1] + 1) * screen_buffer.shape[1]) / 2))
+	screen = Triangle(
+		Vertex(((ts.v1.x * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts.v1.y + 1) * screen_buffer.shape[1]) / 2, 0),
+		Vertex(((ts.v2.x * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts.v2.y + 1) * screen_buffer.shape[1]) / 2, 0),
+		Vertex(((ts.v3.x * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts.v3.y + 1) * screen_buffer.shape[1]) / 2, 0))
 
-	vs1 = (screen[1][0] - screen[0][0], screen[1][1] - screen[0][1])
-	vs2 = (screen[2][0] - screen[0][0], screen[2][1] - screen[0][1])
+	vs1 = (screen.v2.x - screen.v1.x, screen.v2.y - screen.v1.y)
+	vs2 = (screen.v3.x - screen.v1.x, screen.v3.y - screen.v1.y)
 	span_product = vs1[0] * vs2[1] - vs1[1] * vs2[0]
 
 	#We Clamp This To Ensure Anything Outside The Window Boundaries Won't Get Rendered!
-	max_x = clamp(int(max(screen[0][0], max(screen[1][0], screen[2][0]))), 0, WIDTH)
-	min_x = clamp(int(min(screen[0][0], min(screen[1][0], screen[2][0]))), 0, WIDTH)
-	max_y = clamp(int(max(screen[0][1], max(screen[1][1], screen[2][1]))), 0, HEIGHT)
-	min_y = clamp(int(min(screen[0][1], min(screen[1][1], screen[2][1]))), 0, HEIGHT)
+	max_x = clamp(int(max(screen.v1.x, max(screen.v2.x, screen.v3.x))), 0, WIDTH)
+	min_x = clamp(int(min(screen.v1.x, min(screen.v2.x, screen.v3.x))), 0, WIDTH)
+	max_y = clamp(int(max(screen.v1.y, max(screen.v2.y, screen.v3.y))), 0, HEIGHT)
+	min_y = clamp(int(min(screen.v1.y, min(screen.v2.y, screen.v3.y))), 0, HEIGHT)
 
 	#We Don't Loop Through The Entire Buffer As There Is No Need
 	for x in range(min_x, max_x):
 		for y in range(min_y, max_y):
-			q = (x - screen[0][0], y - screen[0][1])
+			q = (x - screen.v1.x, y - screen.v1.y)
 
 			s = (q[0] * vs2[1] - q[1] * vs2[0]) / span_product
 			t = (vs1[0] * q[1] - vs1[1] * q[0]) / span_product
@@ -73,10 +103,12 @@ def process_triangle(ts, image_buffer, screen_buffer):
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def clamp(num, min_value, max_value):
-   return max(min(num, max_value), min_value)
+	return max(min(num, max_value), min_value)
+
+triangle_1 = Triangle(Vertex(-1, -.5, 0), Vertex(0, .5, 0), Vertex(1, -.5, 0))
 
 #Here We Render The Final Image On To The Screen
-def render_flip(screen_buffer, clear = False):
+def render_flip(screen_buffer, clear = True):
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 
 	#This Will Clear Everything & Avoid The Ghost Effect, This Should Not Be Used In Closed Rooms As It Is A Waste Of Processing
@@ -85,9 +117,7 @@ def render_flip(screen_buffer, clear = False):
 
 running = True
 
-triangle_1 = ((-1, -.5), (0, .5), (1, -.5))
-
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED | pygame.FULLSCREEN, vsync=True)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=False)
 pygame.display.set_caption("Polygon Core")
 
 image = pygame.image.load("Brick.bmp").convert()
@@ -103,13 +133,11 @@ while running:
 		if event.type == pygame.QUIT:
 			running = False
 
+
+	
 	keys = pygame.key.get_pressed()
 
-	triangle_1 = ((triangle_1[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 128, triangle_1[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 128),
-	(triangle_1[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 128, triangle_1[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 128),
-	(triangle_1[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 128, triangle_1[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 128))
-
-	start = time.time()
+	triangle_1.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 256, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 256))
 
 	process_triangle(triangle_1, image_buffer, screen_buffer)
 	render_flip(screen_buffer, True)
