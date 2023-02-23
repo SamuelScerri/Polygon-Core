@@ -74,6 +74,8 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer):
 
 			#Essentially This Means That The Coordinates Are In The Triangle Coordinates
 			if s > 0 and t > 0 and s + t <= 1:
+
+				#We Get The Third Barycentric Coordinate Here
 				w = (1 - s - t)
 
 				#Thanks To The Barycentric Coordinates, We Could Interpolate Colour Values Between Every Point
@@ -105,7 +107,8 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer):
 def clamp(num, min_value, max_value):
 	return max(min(num, max_value), min_value)
 
-triangle_1 = Triangle(Vertex(-1, -.5, 0), Vertex(0, .5, 0), Vertex(1, -.5, 0))
+triangle_1 = Triangle(Vertex(-1, -.5, 0), Vertex(0, .5, 0), Vertex(1, -1, 0))
+triangle_2 = Triangle(Vertex(-2, -1, 0), Vertex(0, .5, 0), Vertex(0, -1, 0))
 
 #Here We Render The Final Image On To The Screen
 def render_flip(screen_buffer, clear = True):
@@ -133,13 +136,12 @@ while running:
 		if event.type == pygame.QUIT:
 			running = False
 
-
-	
 	keys = pygame.key.get_pressed()
 
 	triangle_1.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 256, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 256))
 
 	process_triangle(triangle_1, image_buffer, screen_buffer)
+	process_triangle(triangle_2, image_buffer, screen_buffer)
 	render_flip(screen_buffer, True)
 
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
