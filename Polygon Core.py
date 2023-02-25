@@ -3,6 +3,7 @@ from numba.experimental import jitclass
 import numpy as np
 import pygame
 import typing
+from OBJLoader import OBJ, Vertex, Triangle
 
 #config.THREADING_LAYER = 'threadsafe'
 
@@ -10,43 +11,20 @@ WIDTH, HEIGHT = 640, 360
 
 pygame.init()
 
+model = OBJ("Cube.obj")
+
+triangle_mesh = []
+
+for face in model.faces:
+	#print(face[0][2])
+
+	v1	= Vertex(model.vertices[face[0][0] - 1][0], model.vertices[face[0][0] - 1][1], model.vertices[face[0][0] - 1][2] - 10)
+	v2	= Vertex(model.vertices[face[0][1] - 1][0], model.vertices[face[0][1] - 1][1], model.vertices[face[0][1] - 1][2] - 10)
+	v3	= Vertex(model.vertices[face[0][2] - 1][0], model.vertices[face[0][2] - 1][1], model.vertices[face[0][2] - 1][2] - 10)
+
+	triangle_mesh.append(Triangle(v1, v2, v3))
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold = False)
-
-@jitclass
-class Vertex:
-	x: float
-	y: float
-	z: float
-
-	def __init__(self, x: float, y: float, z: float = 0):
-		self.x = x
-		self.y = y
-		self.z = z
-
-@jitclass
-class Triangle:
-	v1: Vertex
-	v2: Vertex
-	v3: Vertex
-
-	def __init__(self, v1: Vertex, v2: Vertex, v3: Vertex):
-		self.v1 = v1
-		self.v2 = v2
-		self.v3 = v3
-
-	def translate(self, move_vector: Vertex):
-		self.v1.x += move_vector.x
-		self.v2.x += move_vector.x
-		self.v3.x += move_vector.x
-
-		self.v1.y += move_vector.y
-		self.v2.y += move_vector.y
-		self.v3.y += move_vector.y
-
-		self.v1.z += move_vector.z
-		self.v2.z += move_vector.z
-		self.v3.z += move_vector.z
 
 def get_normalized_coordinates(ts):
 	screen = np.array([
@@ -150,7 +128,7 @@ def render_flip(screen_buffer, clear = True):
 
 running = True
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=True)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=False)
 pygame.display.set_caption("Polygon Core")
 
 image = pygame.image.load("Brick.bmp").convert()
@@ -170,8 +148,16 @@ while running:
 
 	triangle_1.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 64, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 64, -1 / 64))
 
+	for t in triangle_mesh:
+		#vertices = list(model.vertices[face[0][0]])
+
+		t.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 64, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 64, 0))
+		process_triangle(get_normalized_coordinates(t), image_buffer, screen_buffer)
+
+		#print(vertices)
+
 	
-	process_triangle(get_normalized_coordinates(triangle_1), image_buffer, screen_buffer)
+	#process_triangle(get_normalized_coordinates(triangle_1), image_buffer, screen_buffer)
 	render_flip(screen_buffer, True)
 
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
