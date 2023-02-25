@@ -6,10 +6,16 @@ class Vertex:
 	y: float
 	z: float
 
-	def __init__(self, x: float, y: float, z: float = 0):
+	tx: float
+	ty: float
+
+	def __init__(self, x: float, y: float, z: float = 0, tx: float = 0, ty: float = 0):
 		self.x = x
 		self.y = y
 		self.z = z
+
+		self.tx = tx
+		self.ty = ty
 
 @jitclass
 class Triangle:
@@ -22,18 +28,18 @@ class Triangle:
 		self.v2 = v2
 		self.v3 = v3
 
-	def translate(self, move_vector: Vertex):
-		self.v1.x += move_vector.x
-		self.v2.x += move_vector.x
-		self.v3.x += move_vector.x
+	def translate(self, x, y, z):
+		self.v1.x += x
+		self.v2.x += x
+		self.v3.x += x
 
-		self.v1.y += move_vector.y
-		self.v2.y += move_vector.y
-		self.v3.y += move_vector.y
+		self.v1.y += y
+		self.v2.y += y
+		self.v3.y += y
 
-		self.v1.z += move_vector.z
-		self.v2.z += move_vector.z
-		self.v3.z += move_vector.z
+		self.v1.z += z
+		self.v2.z += z
+		self.v3.z += z
 
 class OBJ:
 	def __init__(self, filename, swapyz=False):
