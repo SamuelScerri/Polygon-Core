@@ -44,15 +44,45 @@ class Triangle:
 		self.v2.y += move_vector.y
 		self.v3.y += move_vector.y
 
+		self.v1.z += move_vector.z
+		self.v2.z += move_vector.z
+		self.v3.z += move_vector.z
+
+def get_normalized_coordinates(ts):
+	screen = np.array([
+		[ts.v1.x, ts.v1.y, ts.v1.z, 1],
+		[ts.v2.x, ts.v2.y, ts.v2.z, 1],
+		[ts.v3.x, ts.v3.y, ts.v3.z, 1]])
+
+	projection_matrix = np.zeros((4, 4))
+	projection_matrix[0][0] = 1 / (np.tan(1.5708 / 2) * (WIDTH / HEIGHT))
+	projection_matrix[1][1] = 1 / np.tan(1.5708 / 2)
+	projection_matrix[2][2] = (1000 + .1) / (.1 - 1000)
+	projection_matrix[2][3] = -1
+	projection_matrix[3][2] = (.1 * 1000 * 2) / (.1 - 1000)
+
+	clipped_position = np.array([
+		np.matmul(projection_matrix, screen[0]),
+		np.matmul(projection_matrix, screen[1]),
+		np.matmul(projection_matrix, screen[2])])
+	
+	normalized = Triangle(
+		Vertex(clipped_position[0][0] / clipped_position[0][3], clipped_position[0][1] / clipped_position[0][3], clipped_position[0][2] / clipped_position[0][3]),
+		Vertex(clipped_position[1][0] / clipped_position[1][3], clipped_position[1][1] / clipped_position[1][3], clipped_position[1][2] / clipped_position[1][3]),
+		Vertex(clipped_position[2][0] / clipped_position[2][3], clipped_position[2][1] / clipped_position[2][3], clipped_position[2][2] / clipped_position[2][3]))
+
+	return normalized
+
 #Here We Compile The Triangle Rasterization Algorithm, This Makes It Super Duper Fast!
 #The Reason For Compiling This Is That It's Non-Dependant On Any Library, AKA Pure Computation
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def process_triangle(ts: Triangle, image_buffer, screen_buffer):
 	#Here We Change The World Space Coordinates To Screen Space Coordinates, We Use World Space To Ensure Rendering Will Be Consistent Across All Resolutions
+
 	screen = Triangle(
-		Vertex(((ts.v1.x * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts.v1.y + 1) * screen_buffer.shape[1]) / 2, 0),
-		Vertex(((ts.v2.x * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts.v2.y + 1) * screen_buffer.shape[1]) / 2, 0),
-		Vertex(((ts.v3.x * screen_buffer.shape[1] / screen_buffer.shape[0] + 1) * screen_buffer.shape[0]) / 2, ((-ts.v3.y + 1) * screen_buffer.shape[1]) / 2, 0))
+		Vertex(((ts.v1.x + 1) * WIDTH) / 2, ((-ts.v1.y + 1) * HEIGHT) / 2, 0),
+		Vertex(((ts.v2.x + 1) * WIDTH) / 2, ((-ts.v2.y + 1) * HEIGHT) / 2, 0),
+		Vertex(((ts.v3.x + 1) * WIDTH) / 2, ((-ts.v3.y + 1) * HEIGHT) / 2, 0))
 
 	vs1 = (screen.v2.x - screen.v1.x, screen.v2.y - screen.v1.y)
 	vs2 = (screen.v3.x - screen.v1.x, screen.v3.y - screen.v1.y)
@@ -107,8 +137,8 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer):
 def clamp(num, min_value, max_value):
 	return max(min(num, max_value), min_value)
 
-triangle_1 = Triangle(Vertex(-1, -.5, 0), Vertex(0, .5, 0), Vertex(1, -1, 0))
-triangle_2 = Triangle(Vertex(-2, -1, 0), Vertex(0, .5, 0), Vertex(0, -1, 0))
+triangle_1 = Triangle(Vertex(-1, -.5, -1), Vertex(0, .5, -1), Vertex(1, -1, -1))
+triangle_2 = Triangle(Vertex(-2, -1, 1), Vertex(0, .5, 1), Vertex(0, -1, 1))
 
 #Here We Render The Final Image On To The Screen
 def render_flip(screen_buffer, clear = True):
@@ -120,7 +150,7 @@ def render_flip(screen_buffer, clear = True):
 
 running = True
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=False)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=True)
 pygame.display.set_caption("Polygon Core")
 
 image = pygame.image.load("Brick.bmp").convert()
@@ -138,10 +168,10 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	triangle_1.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 256, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 256))
+	triangle_1.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 64, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 64, -1 / 64))
 
-	process_triangle(triangle_1, image_buffer, screen_buffer)
-	process_triangle(triangle_2, image_buffer, screen_buffer)
+	
+	process_triangle(get_normalized_coordinates(triangle_1), image_buffer, screen_buffer)
 	render_flip(screen_buffer, True)
 
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
