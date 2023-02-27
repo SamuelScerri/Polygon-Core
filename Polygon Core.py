@@ -5,20 +5,20 @@ import pygame
 import typing
 from OBJLoader import OBJ, Vertex, Triangle
 
-#config.THREADING_LAYER = 'threadsafe'
-
-WIDTH, HEIGHT = 640, 360
+WIDTH, HEIGHT = 320, 180
+NEAR, FAR = .1, 1000
+FOV = 90
 
 pygame.init()
 
 model = OBJ("Crate.obj")
 
 projection_matrix = np.zeros((4, 4), dtype=np.float32)
-projection_matrix[0][0] = 1 / (np.tan(1.5708 / 2) * (WIDTH / HEIGHT))
-projection_matrix[1][1] = 1 / np.tan(1.5708 / 2)
-projection_matrix[2][2] = (1000 + .1) / (.1 - 1000)
+projection_matrix[0][0] = 1 / (np.tan((FOV * .01745) / 2) * (WIDTH / HEIGHT))
+projection_matrix[1][1] = 1 / np.tan((FOV * .01745) / 2)
+projection_matrix[2][2] = (FAR + NEAR) / (NEAR - FAR)
 projection_matrix[2][3] = -1
-projection_matrix[3][2] = (.1 * 1000 * 2) / (.1 - 1000)
+projection_matrix[3][2] = (NEAR * FAR * 2) / (NEAR - FAR)
 
 triangle_mesh = []
 
@@ -32,14 +32,6 @@ for face in model.faces:
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold = False)
 
-#multiplication function
-@jit
-def matmul(matrix1,matrix2,rmatrix):
-	for i in range(len(matrix1)):
-		for j in range(len(matrix2[0])):
-			for k in range(len(matrix2)):
-				rmatrix[i][j] += matrix1[i][k] * matrix2[k][j]
-
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def get_normalized_coordinates(ts, matrix):
 	screen = np.array([
@@ -50,11 +42,14 @@ def get_normalized_coordinates(ts, matrix):
 	clipped_1 = np.dot(matrix, screen[0])
 	clipped_2 = np.dot(matrix, screen[1])
 	clipped_3 = np.dot(matrix, screen[2])
+
+	normalized = Triangle(Vertex(0, 0, 0, 0, 0), Vertex(0, 0, 0, 0, 0), Vertex(0, 0, 0, 0, 0))
 	
-	normalized = Triangle(
-		Vertex(clipped_1[0] / clipped_1[3], clipped_1[1] / clipped_1[3], clipped_1[2] / clipped_1[3], ts.v1.tx, ts.v1.ty),
-		Vertex(clipped_2[0] / clipped_2[3], clipped_2[1] / clipped_2[3], clipped_2[2] / clipped_2[3], ts.v2.tx, ts.v2.ty),
-		Vertex(clipped_3[0] / clipped_3[3], clipped_3[1] / clipped_3[3], clipped_3[2] / clipped_3[3], ts.v3.tx, ts.v3.ty))
+	if clipped_1[3] != 0:
+		normalized = Triangle(
+			Vertex(clipped_1[0] / clipped_1[3], clipped_1[1] / clipped_1[3], clipped_1[2] / clipped_1[3], ts.v1.tx, ts.v1.ty),
+			Vertex(clipped_2[0] / clipped_2[3], clipped_2[1] / clipped_2[3], clipped_2[2] / clipped_2[3], ts.v2.tx, ts.v2.ty),
+			Vertex(clipped_3[0] / clipped_3[3], clipped_3[1] / clipped_3[3], clipped_3[2] / clipped_3[3], ts.v3.tx, ts.v3.ty))
 
 	return normalized
 
@@ -79,6 +74,7 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
 	max_y = clamp(int(max(screen.v1.y, max(screen.v2.y, screen.v3.y))), 0, HEIGHT)
 	min_y = clamp(int(min(screen.v1.y, min(screen.v2.y, screen.v3.y))), 0, HEIGHT)
 
+
 	#We Don't Loop Through The Entire Buffer As There Is No Need
 	for x in range(min_x, max_x):
 		for y in range(min_y, max_y):
@@ -101,8 +97,6 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
 				if image_buffer is None:
 					screen_buffer[x][y] = (r << 16) + (g << 8) + b
 				else:
-					#print(screen.v1.tx)
-
 					#We Get The Color Coordinates From The Image Buffer
 					uvx = int((w * screen.v1.tx + s * screen.v2.tx + t * screen.v3.tx) * image_buffer.shape[0])
 					uvy = int((w * screen.v1.ty + s * screen.v2.ty + t * screen.v3.ty) * image_buffer.shape[1])
@@ -118,7 +112,6 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
 					final_b = int((uvb * b) / 255)
 
 					depth = w * screen.v1.z + s * screen.v2.z + t * screen.v3.z
-					#print(depth)
 
 					#Here We Convert The RGB Value To A Color Integer, Then It Is Assigned To The Screen Buffer
 					if depth > depth_buffer[x][y]:
@@ -144,10 +137,9 @@ def render_flip(screen_buffer, clear = True):
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def render_model(model, image_buffer, screen_buffer, depth_buffer):
 	for i in range(len(model)):
-		#t.translate(Vertex((keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 16, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 16, (keys[pygame.K_w] - keys[pygame.K_s]) / 16))
-		
-		#model[i].translate(Vertex(-1 / 64, 0, 0, 0, 0))
-		process_triangle(get_normalized_coordinates(model[i], projection_matrix), image_buffer, screen_buffer, depth_buffer)
+		if model[i].v1.z > 0 and model[i].v2.z > 0 and model[i].v3.z > 0:
+			coordinates = get_normalized_coordinates(model[i], projection_matrix)
+			process_triangle(coordinates, image_buffer, screen_buffer, depth_buffer)
 
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
@@ -176,13 +168,9 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	#triangle_1.translate(Vertex((keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) / 32, (keys[pygame.K_UP] - keys[pygame.K_DOWN]) / 32, -1 / 64))
-
-	translate_model(triangle_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, 0)
-
+	translate_model(triangle_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, (keys[pygame.K_w] - keys[pygame.K_s]) / 8)
 	render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
 	
-	#process_triangle(get_normalized_coordinates(triangle_1), image_buffer, screen_buffer)
 	render_flip(screen_buffer, True)
 
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
