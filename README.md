@@ -16,3 +16,4 @@
   - Basic Triangle Clipping
   - Multicore Rendering Support (Using Numba)
   - Basic Diffuse Lighing
+  - Translating & Rotation Support For Models
