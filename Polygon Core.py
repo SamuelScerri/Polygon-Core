@@ -5,13 +5,13 @@ import pygame
 import typing
 from OBJLoader import OBJ, Vertex, Triangle
 
-WIDTH, HEIGHT = 320, 180
+WIDTH, HEIGHT = 640, 360
 NEAR, FAR = .1, 1000
 FOV = 90
 
 pygame.init()
 
-model = OBJ("Crate.obj")
+model = OBJ("Cube.obj")
 
 projection_matrix = np.zeros((4, 4), dtype=np.float32)
 projection_matrix[0][0] = 1 / (np.tan((FOV * .01745) / 2) * (WIDTH / HEIGHT))
@@ -89,18 +89,19 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
 				#We Get The Third Barycentric Coordinate Here
 				w = (1 - s - t)
 
-				#Thanks To The Barycentric Coordinates, We Could Interpolate Colour Values Between Every Point
-				r = int(w * 255 + s * 255 + t * 255)
-				g = int(w * 255 + s * 255 + t * 255)
-				b = int(w * 255 + s * 255 + t * 255)
+				depth = w * screen.v1.z + s * screen.v2.z + t * screen.v3.z
 
-				if image_buffer is None:
-					screen_buffer[x][y] = (r << 16) + (g << 8) + b
-				else:
+				#Here We Convert The RGB Value To A Color Integer, Then It Is Assigned To The Screen Buffer
+				if depth > depth_buffer[x][y]:
+					#Thanks To The Barycentric Coordinates, We Could Interpolate Colour Values Between Every Point
+					r = int(w * 255 + s * 0 + t * 0)
+					g = int(w * 0 + s * 255 + t * 0)
+					b = int(w * 0 + s * 0 + t * 255)
+
 					#We Get The Color Coordinates From The Image Buffer
 					uvx = int((w * screen.v1.tx + s * screen.v2.tx + t * screen.v3.tx) * image_buffer.shape[0])
 					uvy = int((w * screen.v1.ty + s * screen.v2.ty + t * screen.v3.ty) * image_buffer.shape[1])
-
+					
 					#Here We Convert To RGB To Implement Additive Mixing
 					uvr = ((image_buffer[uvx][uvy] >> 16) & 0xff)
 					uvg = ((image_buffer[uvx][uvy] >> 8) & 0xff)
@@ -111,18 +112,14 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
 					final_g = int((uvg * g) / 255)
 					final_b = int((uvb * b) / 255)
 
-					depth = w * screen.v1.z + s * screen.v2.z + t * screen.v3.z
-
-					#Here We Convert The RGB Value To A Color Integer, Then It Is Assigned To The Screen Buffer
-					if depth > depth_buffer[x][y]:
-						screen_buffer[x][y] = (final_r << 16) + (final_g << 8) + final_b
-						depth_buffer[x][y] = depth
+					screen_buffer[x][y] = (final_r << 16) + (final_g << 8) + final_b
+					depth_buffer[x][y] = depth
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def clamp(num, min_value, max_value):
 	return max(min(num, max_value), min_value)
 
-triangle_1 = Triangle(Vertex(-1, -.5, -1), Vertex(0, .5, -1), Vertex(1, -1, -1))
+triangle_1 = Triangle(Vertex(-1, -.5, 5, 0, .5), Vertex(0, .5, 5, 0, 0), Vertex(1, -1, 5, .5, .5))
 triangle_2 = Triangle(Vertex(-2, -1, 1), Vertex(0, .5, 1), Vertex(0, -1, 1))
 
 #Here We Render The Final Image On To The Screen
@@ -149,10 +146,10 @@ def translate_model(model, x, y, z):
 
 running = True
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=True)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=False)
 pygame.display.set_caption("Polygon Core")
 
-image = pygame.image.load("Texture.png").convert()
+image = pygame.image.load("Brick.bmp").convert()
 
 #The Renderer Only Works With Image Pixel Data, Here We Reference As To Avoid Large Memory Allocations
 image_buffer = pygame.surfarray.pixels2d(image)
@@ -170,6 +167,10 @@ while running:
 
 	translate_model(triangle_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, (keys[pygame.K_w] - keys[pygame.K_s]) / 8)
 	render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
+	#render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
+	#render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
+
+	process_triangle(get_normalized_coordinates(triangle_1, projection_matrix), image_buffer, screen_buffer, depth_buffer)
 	
 	render_flip(screen_buffer, True)
 
