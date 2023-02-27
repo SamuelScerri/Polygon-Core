@@ -1,5 +1,8 @@
 # Polygon Core - A Software Renderer Written In Python
 
+<img width="1280" alt="Screenshot" src="https://user-images.githubusercontent.com/92179479/221653845-8d29ceae-f86e-4395-9f52-b38e4775c011.png">
+
+
 # Libraries Used:
   - Numpy: For Fast Matrix Multiplication & Pixel Copying Instructions
   - Numba: For Caching & Compiling Functions To Increase Performance
@@ -17,3 +20,4 @@
   - Multicore Rendering Support (Using Numba)
   - Basic Diffuse Lighing
   - Translating & Rotation Support For Models
+  - Perspective Correct Texture Mapping
