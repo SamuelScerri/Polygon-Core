@@ -12,6 +12,7 @@ FOV = 90
 pygame.init()
 
 model = OBJ("Cube.obj")
+floor = OBJ("Plane.obj")
 
 projection_matrix = np.zeros((4, 4), dtype=np.float32)
 projection_matrix[0][0] = 1 / (np.tan((FOV * .01745) / 2) * (WIDTH / HEIGHT))
@@ -21,6 +22,7 @@ projection_matrix[2][3] = -1
 projection_matrix[3][2] = (NEAR * FAR * 2) / (NEAR - FAR)
 
 triangle_mesh = []
+floor_mesh = []
 
 for face in model.faces:
 	v1	= Vertex(model.vertices[face[0][0] - 1][0], model.vertices[face[0][0] - 1][1], model.vertices[face[0][0] - 1][2] + 20, model.texcoords[face[2][0] - 1][0], 1 - model.texcoords[face[2][0] - 1][1])
@@ -29,11 +31,19 @@ for face in model.faces:
 
 	triangle_mesh.append(Triangle(v1, v2, v3))
 
+
+for face in floor.faces:
+	v1	= Vertex(floor.vertices[face[0][0] - 1][0], floor.vertices[face[0][0] - 1][1], floor.vertices[face[0][0] - 1][2] + 20, floor.texcoords[face[2][0] - 1][0], 1 - floor.texcoords[face[2][0] - 1][1])
+	v2	= Vertex(floor.vertices[face[0][1] - 1][0], floor.vertices[face[0][1] - 1][1], floor.vertices[face[0][1] - 1][2] + 20, floor.texcoords[face[2][1] - 1][0], 1 - floor.texcoords[face[2][1] - 1][1])
+	v3	= Vertex(floor.vertices[face[0][2] - 1][0], floor.vertices[face[0][2] - 1][1], floor.vertices[face[0][2] - 1][2] + 20, floor.texcoords[face[2][2] - 1][0], 1 - floor.texcoords[face[2][2] - 1][1])
+
+	floor_mesh.append(Triangle(v1, v2, v3))
+
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold = False)
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
-def get_normalized_coordinates(ts, matrix):
+def get_clipped_coordinates(ts, matrix):
 	screen = np.array([
 		[ts.v1.x, ts.v1.y, ts.v1.z, 1],
 		[ts.v2.x, ts.v2.y, ts.v2.z, 1],
@@ -43,20 +53,27 @@ def get_normalized_coordinates(ts, matrix):
 	clipped_2 = np.dot(matrix, screen[1])
 	clipped_3 = np.dot(matrix, screen[2])
 
-	normalized = Triangle(Vertex(0, 0, 0, 0, 0), Vertex(0, 0, 0, 0, 0), Vertex(0, 0, 0, 0, 0))
-	
-	if clipped_1[3] != 0:
-		normalized = Triangle(
-			Vertex(clipped_1[0] / clipped_1[3], clipped_1[1] / clipped_1[3], clipped_1[2] / clipped_1[3], ts.v1.tx, ts.v1.ty),
-			Vertex(clipped_2[0] / clipped_2[3], clipped_2[1] / clipped_2[3], clipped_2[2] / clipped_2[3], ts.v2.tx, ts.v2.ty),
-			Vertex(clipped_3[0] / clipped_3[3], clipped_3[1] / clipped_3[3], clipped_3[2] / clipped_3[3], ts.v3.tx, ts.v3.ty))
+	clipped_triangle = Triangle(
+		Vertex(clipped_1[0], clipped_1[1], clipped_1[2], clipped_1[3], 0),
+		Vertex(clipped_2[0], clipped_2[1], clipped_2[2], clipped_2[3], 0),
+		Vertex(clipped_3[0], clipped_3[1], clipped_3[2], clipped_3[3], 0)
+	)
+
+	return clipped_triangle
+
+@jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
+def get_normalized_coordinates(ts, coordinates):
+	normalized = Triangle(
+		Vertex(coordinates.v1.x / coordinates.v1.tx, coordinates.v1.y / coordinates.v1.tx, coordinates.v1.z / coordinates.v1.tx, ts.v1.tx, ts.v1.ty),
+		Vertex(coordinates.v2.x / coordinates.v2.tx, coordinates.v2.y / coordinates.v2.tx, coordinates.v2.z / coordinates.v2.tx, ts.v2.tx, ts.v2.ty),
+		Vertex(coordinates.v3.x / coordinates.v3.tx, coordinates.v3.y / coordinates.v3.tx, coordinates.v3.z / coordinates.v3.tx, ts.v3.tx, ts.v3.ty))
 
 	return normalized
 
 #Here We Compile The Triangle Rasterization Algorithm, This Makes It Super Duper Fast!
 #The Reason For Compiling This Is That It's Non-Dependant On Any Library, AKA Pure Computation
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
-def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
+def process_triangle(clipped: Triangle, ts: Triangle, image_buffer, screen_buffer, depth_buffer, matrix):
 	#Here We Change The World Space Coordinates To Screen Space Coordinates, We Use World Space To Ensure Rendering Will Be Consistent Across All Resolutions
 
 	screen = Triangle(
@@ -98,22 +115,27 @@ def process_triangle(ts: Triangle, image_buffer, screen_buffer, depth_buffer):
 					g = int(w * 0 + s * 255 + t * 0)
 					b = int(w * 0 + s * 0 + t * 255)
 
-					#We Get The Color Coordinates From The Image Buffer
-					uvx = int((w * screen.v1.tx + s * screen.v2.tx + t * screen.v3.tx) * image_buffer.shape[0])
-					uvy = int((w * screen.v1.ty + s * screen.v2.ty + t * screen.v3.ty) * image_buffer.shape[1])
+					if image_buffer == None:
+						screen_buffer[x][y] = (r << 16) + (g << 8) + b
+						depth_buffer[x][y] = depth
+
+					else:
+						#We Get The Color Coordinates From The Image Buffer
+						uvx = int((w * screen.v1.tx + s * screen.v2.tx + t * screen.v3.tx) * image_buffer.shape[0])
+						uvy = int((w * screen.v1.ty + s * screen.v2.ty + t * screen.v3.ty) * image_buffer.shape[1])
 					
-					#Here We Convert To RGB To Implement Additive Mixing
-					uvr = ((image_buffer[uvx][uvy] >> 16) & 0xff)
-					uvg = ((image_buffer[uvx][uvy] >> 8) & 0xff)
-					uvb = ((image_buffer[uvx][uvy]) & 0xff)
+						#Here We Convert To RGB To Implement Additive Mixing
+						uvr = ((image_buffer[uvx][uvy] >> 16) & 0xff)
+						uvg = ((image_buffer[uvx][uvy] >> 8) & 0xff)
+						uvb = ((image_buffer[uvx][uvy]) & 0xff)
 
-					#Responsible For Mixing The Two Colors
-					final_r = int((uvr * r) / 255)
-					final_g = int((uvg * g) / 255)
-					final_b = int((uvb * b) / 255)
+						#Responsible For Mixing The Two Colors
+						final_r = int((uvr * r) / 255)
+						final_g = int((uvg * g) / 255)
+						final_b = int((uvb * b) / 255)
 
-					screen_buffer[x][y] = (final_r << 16) + (final_g << 8) + final_b
-					depth_buffer[x][y] = depth
+						screen_buffer[x][y] = (final_r << 16) + (final_g << 8) + final_b
+						depth_buffer[x][y] = depth
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
 def clamp(num, min_value, max_value):
@@ -132,11 +154,17 @@ def render_flip(screen_buffer, clear = True):
 		depth_buffer.fill(0)
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
-def render_model(model, image_buffer, screen_buffer, depth_buffer):
+def render_model(model, image_buffer, screen_buffer, depth_buffer, matrix):
 	for i in range(len(model)):
-		if model[i].v1.z > 0 and model[i].v2.z > 0 and model[i].v3.z > 0:
-			coordinates = get_normalized_coordinates(model[i], projection_matrix)
-			process_triangle(coordinates, image_buffer, screen_buffer, depth_buffer)
+		clipped_coordinates = get_clipped_coordinates(model[i], matrix)
+
+		clipped_coordinates.v1.tx = clamp(clipped_coordinates.v1.tx, -9999, -0.1)
+		clipped_coordinates.v2.tx = clamp(clipped_coordinates.v2.tx, -9999, -0.1)
+		clipped_coordinates.v3.tx = clamp(clipped_coordinates.v3.tx, -9999, -0.1)
+
+		if clipped_coordinates.v1.tx < 0 and clipped_coordinates.v2.tx < 0 and clipped_coordinates.v3.tx < 0:
+			normalized_coordinates = get_normalized_coordinates(model[i], clipped_coordinates)
+			process_triangle(clipped_coordinates, normalized_coordinates, image_buffer, screen_buffer, depth_buffer, matrix)
 
 
 @jit(parallel=False, nogil=True, cache=False, nopython=True, fastmath=True)
@@ -146,7 +174,7 @@ def translate_model(model, x, y, z):
 
 running = True
 
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=False)
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=True)
 pygame.display.set_caption("Polygon Core")
 
 image = pygame.image.load("Brick.bmp").convert()
@@ -166,11 +194,13 @@ while running:
 	keys = pygame.key.get_pressed()
 
 	translate_model(triangle_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, (keys[pygame.K_w] - keys[pygame.K_s]) / 8)
-	render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
-	#render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
+	translate_model(floor_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, (keys[pygame.K_w] - keys[pygame.K_s]) / 8)
+
+	render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer, projection_matrix)
+	render_model(floor_mesh, None, screen_buffer, depth_buffer, projection_matrix)
 	#render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
 
-	process_triangle(get_normalized_coordinates(triangle_1, projection_matrix), image_buffer, screen_buffer, depth_buffer)
+	#process_triangle(get_normalized_coordinates(triangle_1, projection_matrix), image_buffer, screen_buffer, depth_buffer, projection_matrix)
 	
 	render_flip(screen_buffer, True)
 
