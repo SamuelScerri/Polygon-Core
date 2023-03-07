@@ -178,9 +178,11 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.SCALED, vsync=True)
 pygame.display.set_caption("Polygon Core")
 
 image = pygame.image.load("Brick.bmp").convert()
+crate_image = pygame.image.load("Texture.png").convert()
 
 #The Renderer Only Works With Image Pixel Data, Here We Reference As To Avoid Large Memory Allocations
 image_buffer = pygame.surfarray.pixels2d(image)
+crate_image_buffer = pygame.surfarray.pixels2d(crate_image)
 
 #Here We Create The Screen Buffer, This Is Useful As To Avoid Calling The Blit Function Multiple Times
 screen_buffer = np.zeros((WIDTH, HEIGHT), dtype=np.int32)
@@ -194,13 +196,7 @@ while running:
 	keys = pygame.key.get_pressed()
 
 	translate_model(triangle_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, (keys[pygame.K_w] - keys[pygame.K_s]) / 8)
-	translate_model(floor_mesh, (keys[pygame.K_LEFT] - keys[pygame.K_RIGHT]) / 8, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) / 8, (keys[pygame.K_w] - keys[pygame.K_s]) / 8)
-
 	render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer, projection_matrix)
-	render_model(floor_mesh, None, screen_buffer, depth_buffer, projection_matrix)
-	#render_model(triangle_mesh, image_buffer, screen_buffer, depth_buffer)
-
-	#process_triangle(get_normalized_coordinates(triangle_1, projection_matrix), image_buffer, screen_buffer, depth_buffer, projection_matrix)
 	
 	render_flip(screen_buffer, True)
 
