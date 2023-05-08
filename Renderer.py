@@ -35,11 +35,11 @@ projection_matrix[3][2] = -1 * ((2 * FAR * NEAR) / (FAR - NEAR))
 
 running = True
 
-#triangle_test = (
-#	(0.0, 0.5, -4.0, 1.0),
-#	(-0.5, -0.5, -4.0, 1.0),
-#	(0.5, -0.5, -4.0, 1.0)
-#)
+triangle_test = (
+	(0.0, 0.5, -4.0, 1.0),
+	(-0.5, -0.5, -4.0, 1.0),
+	(0.5, -0.5, -4.0, 1.0)
+)
 
 triangle_test = (
 	(0.1, 0.1, -1.0, 1.0),
@@ -91,23 +91,35 @@ def lerp_vertex(vertex, target, factor):
 	]
 
 @numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=True)
-def clip_triangle(clipped_coordinate, uv_coordinate, axis):
+def clip_triangle(clipped_coordinate, uv_coordinate, axis, opposite):
 	vertex_list = []
 	uv_list = []
 
 	previous_vertex = clipped_coordinate[len(clipped_coordinate) - 1]
 	previous_inside = previous_vertex[axis] <= previous_vertex[3]
+	if opposite:
+		previous_inside = previous_vertex[axis] >= -previous_vertex[3]
+
 	previous_uv = uv_coordinate[len(clipped_coordinate) - 1]
 
 	for index in range(len(clipped_coordinate)):
 		current_vertex = clipped_coordinate[index]
 		current_inside = current_vertex[axis] <= current_vertex[3]
 
+		if opposite:
+			current_inside = current_vertex[axis] >= -current_vertex[3]
+
 		if current_inside ^ previous_inside:
 			factor = (previous_vertex[3] - previous_vertex[axis]) / (
 				(previous_vertex[3] - previous_vertex[axis]) -
 				(current_vertex[3] - current_vertex[axis])
 			)
+
+			if opposite:
+				factor = (previous_vertex[3] + previous_vertex[axis]) / (
+					(previous_vertex[3] + previous_vertex[axis]) -
+					(current_vertex[3] + current_vertex[axis])
+				)	
 
 			vertex_list.append([
 				lerp(previous_vertex[0], current_vertex[0], factor),
@@ -152,18 +164,28 @@ def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 	clipped_coordinate = get_clipped_coordinates(vertex_coordinate, projection_matrix)
 	#Thanks To The Clipped Coordinate We Can See Which Exact Coordinate The Triangle Will Leave The Screen
 	#With This We Will Now Clip The Triangle Into Multiple Triangles If Its Intersecting With The Clipping Coordinate
+
+
 	
-	vertex_list, uv_list = clip_triangle(clipped_coordinate, uv_coordinate, 0)
+	vertex_list, uv_list = clip_triangle(clipped_coordinate, uv_coordinate, 0, False)
 
 	if len(vertex_list) > 0:
-		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 1)
+		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 0, True)
 
 	if len(vertex_list) > 0:
-		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 2)
+		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 1, False)
+
+	if len(vertex_list) > 0:
+		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 1, True)
+
+	if len(vertex_list) > 0:
+		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 2, False)
 
 	if len(vertex_list) > 0:
 		for coordinate in vertex_list:
 			normalized_coordinates.append(get_normalized_coordinate(coordinate))
+
+		print(len(normalized_coordinates))
 
 		#Simple Polygon Rendering
 		for index in range(len(normalized_coordinates) - 2):
@@ -196,27 +218,28 @@ def process_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 
 	#print(vertex_coordinate[0][3])
 
-	for x in range(0, screen_buffer.shape[0]):
-		for y in range(0, screen_buffer.shape[1]):
-			q = (x - screen_space_coordinate[0][0], y - screen_space_coordinate[0][1])
+	if span_product != 0:
+		for x in range(0, screen_buffer.shape[0]):
+			for y in range(0, screen_buffer.shape[1]):
+				q = (x - screen_space_coordinate[0][0], y - screen_space_coordinate[0][1])
 
-			s = (q[0] * vertex_span_2[1] - q[1] * vertex_span_2[0]) / span_product
-			t = (vertex_span_1[0] * q[1] - vertex_span_1[1] * q[0]) / span_product
+				s = (q[0] * vertex_span_2[1] - q[1] * vertex_span_2[0]) / span_product
+				t = (vertex_span_1[0] * q[1] - vertex_span_1[1] * q[0]) / span_product
 
-			w = 1 - s - t
+				w = 1 - s - t
 
-			if s > 0 and t > 0 and s + t <= 1:
-				#We Divide By The Clip Space For Perspective Correct Texture Mapping
-				uvx = w * (uv_coordinate[0][0] / vertex_coordinate[0][3]) + s * (uv_coordinate[1][0] / vertex_coordinate[1][3]) + t * (uv_coordinate[2][0] / vertex_coordinate[2][3])
-				uvy = w * (uv_coordinate[0][1] / vertex_coordinate[0][3]) + s * (uv_coordinate[1][1] / vertex_coordinate[1][3]) + t * (uv_coordinate[2][1] / vertex_coordinate[2][3])
+				if s > 0 and t > 0 and s + t <= 1:
+					#We Divide By The Clip Space For Perspective Correct Texture Mapping
+					uvx = w * (uv_coordinate[0][0] / vertex_coordinate[0][3]) + s * (uv_coordinate[1][0] / vertex_coordinate[1][3]) + t * (uv_coordinate[2][0] / vertex_coordinate[2][3])
+					uvy = w * (uv_coordinate[0][1] / vertex_coordinate[0][3]) + s * (uv_coordinate[1][1] / vertex_coordinate[1][3]) + t * (uv_coordinate[2][1] / vertex_coordinate[2][3])
 
-				z = 1 / ((w * 1 / vertex_coordinate[0][3] + s * 1 / vertex_coordinate[1][3] + t * 1 / vertex_coordinate[2][3]))
-				#print(z)
+					z = 1 / ((w * 1 / vertex_coordinate[0][3] + s * 1 / vertex_coordinate[1][3] + t * 1 / vertex_coordinate[2][3]))
+					#print(z)
 
-				uvx = int(uvx * texture.shape[0] * z)
-				uvy = int(uvy * texture.shape[1] * z)
+					uvx = int(uvx * texture.shape[0] * z)
+					uvy = int(uvy * texture.shape[1] * z)
 
-				screen_buffer[x][y] = texture[uvx][uvy]	
+					screen_buffer[x][y] = texture[uvx][uvy]	
 
 image = pygame.image.load("Brick.bmp").convert()
 image_buffer = pygame.surfarray.pixels2d(image)
