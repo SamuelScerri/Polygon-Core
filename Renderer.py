@@ -136,25 +136,37 @@ def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 		previous_inside = current_inside
 		previous_uv = uv_coordinate[index]
 
-	#print((vertex_list))
-
 	for coordinate in vertex_list:
 		normalized_coordinates.append(get_normalized_coordinate(coordinate))
 
-	screen_space_coordinate = None
+	#print(normalized_coordinates[1:4])
 
-	if len(normalized_coordinates) == 3:
-		screen_space_coordinate = (
-			(((normalized_coordinates[0][0] + 1) * screen_buffer.shape[0]) / 2, ((-normalized_coordinates[0][1] + 1) * screen_buffer.shape[1]) / 2),
-			(((normalized_coordinates[1][0] + 1) * screen_buffer.shape[0]) / 2, ((-normalized_coordinates[1][1] + 1) * screen_buffer.shape[1]) / 2),
-			(((normalized_coordinates[2][0] + 1) * screen_buffer.shape[0]) / 2, ((-normalized_coordinates[2][1] + 1) * screen_buffer.shape[1]) / 2)
-		)
-	else:
-		screen_space_coordinate = (
-			(((normalized_coordinates[1][0] + 1) * screen_buffer.shape[0]) / 2, ((-normalized_coordinates[1][1] + 1) * screen_buffer.shape[1]) / 2),
-			(((normalized_coordinates[2][0] + 1) * screen_buffer.shape[0]) / 2, ((-normalized_coordinates[2][1] + 1) * screen_buffer.shape[1]) / 2),
-			(((normalized_coordinates[3][0] + 1) * screen_buffer.shape[0]) / 2, ((-normalized_coordinates[3][1] + 1) * screen_buffer.shape[1]) / 2)
-		)
+	if len(normalized_coordinates) > 0:
+		process_triangle(normalized_coordinates[0:3], uv_list[0:3], texture, screen_buffer)
+
+		if len(normalized_coordinates) > 3:
+			second_triangle = (
+				normalized_coordinates[0],
+				normalized_coordinates[2],
+				normalized_coordinates[3]
+			)
+
+			second_uv = (
+				uv_list[0],
+				uv_list[2],
+				uv_list[3]
+			)
+
+			process_triangle(second_triangle, second_uv, texture, screen_buffer)
+
+
+@numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=True)
+def process_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
+	screen_space_coordinate = (
+		(((vertex_coordinate[0][0] + 1) * screen_buffer.shape[0]) / 2, ((-vertex_coordinate[0][1] + 1) * screen_buffer.shape[1]) / 2),
+		(((vertex_coordinate[1][0] + 1) * screen_buffer.shape[0]) / 2, ((-vertex_coordinate[1][1] + 1) * screen_buffer.shape[1]) / 2),
+		(((vertex_coordinate[2][0] + 1) * screen_buffer.shape[0]) / 2, ((-vertex_coordinate[2][1] + 1) * screen_buffer.shape[1]) / 2)
+	)
 
 	vertex_span_1 = (screen_space_coordinate[1][0] - screen_space_coordinate[0][0], screen_space_coordinate[1][1] - screen_space_coordinate[0][1])
 	vertex_span_2 = (screen_space_coordinate[2][0] - screen_space_coordinate[0][0], screen_space_coordinate[2][1] - screen_space_coordinate[0][1])
@@ -171,14 +183,10 @@ def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 			w = 1 - s - t
 
 			if s > 0 and t > 0 and s + t <= 1:
-				if len(normalized_coordinates) == 3:
-					uvx = int((w * uv_list[0][0] + s * uv_list[1][0] + t * uv_list[2][0]) * texture.shape[0])
-					uvy = int((w * uv_list[0][0] + s * uv_list[1][1] + t * uv_list[2][1]) * texture.shape[1])
-				else:
-					uvx = int((w * uv_list[1][0] + s * uv_list[2][0] + t * uv_list[3][0]) * texture.shape[0])
-					uvy = int((w * uv_list[1][0] + s * uv_list[2][1] + t * uv_list[3][1]) * texture.shape[1])					
+				uvx = int((w * uv_coordinate[0][0] + s * uv_coordinate[1][0] + t * uv_coordinate[2][0]) * texture.shape[0])
+				uvy = int((w * uv_coordinate[0][0] + s * uv_coordinate[1][1] + t * uv_coordinate[2][1]) * texture.shape[1])	
 
-				screen_buffer[x][y] = texture[uvx][uvy]
+				screen_buffer[x][y] = texture[uvx][uvy]	
 
 image = pygame.image.load("Brick.bmp").convert()
 image_buffer = pygame.surfarray.pixels2d(image)
