@@ -42,15 +42,15 @@ running = True
 #)
 
 triangle_test = (
-	(0.1, 0.1, -5.0, 1.0),
-	(0.1, -0.1, -5.5, 1.0),
-	(0.1, -0.1, -4.5, 1.0),
+	(0.1, 0.1, -1.0, 1.0),
+	(0.1, -0.1, -1.5, 1.0),
+	(0.1, -0.1, -0.5, 1.0),
 )
 
 uv = (
-	(-.2, -.2),
-	(.2, -.2),
-	(.2, .2)
+	(-.5, -.5),
+	(.5, -.5),
+	(.5, .5)
 )
 
 @numba.jit(parallel=False, nogil=True, cache=True, nopython=True, fastmath=True)
@@ -77,7 +77,7 @@ def get_clipped_coordinates(vertex_coordinate, matrix):
 def get_normalized_coordinate(vertex_coordinate):
 
 
-	normalized_1 = (vertex_coordinate[0] / vertex_coordinate[3], vertex_coordinate[1] / vertex_coordinate[3], vertex_coordinate[2] / vertex_coordinate[3])
+	normalized_1 = (vertex_coordinate[0] / vertex_coordinate[3], vertex_coordinate[1] / vertex_coordinate[3], vertex_coordinate[2] / vertex_coordinate[3], vertex_coordinate[3])
 
 	return normalized_1
 
@@ -170,7 +170,7 @@ def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 			second_triangle = (
 				normalized_coordinates[0],
 				normalized_coordinates[index + 1],
-				normalized_coordinates[index + 2]
+				normalized_coordinates[index + 2],
 			)
 
 			second_uv = (
@@ -194,6 +194,8 @@ def process_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 
 	span_product = vertex_span_1[0] * vertex_span_2[1] - vertex_span_1[1] * vertex_span_2[0]
 
+	#print(vertex_coordinate[0][3])
+
 	for x in range(0, screen_buffer.shape[0]):
 		for y in range(0, screen_buffer.shape[1]):
 			q = (x - screen_space_coordinate[0][0], y - screen_space_coordinate[0][1])
@@ -204,8 +206,15 @@ def process_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 			w = 1 - s - t
 
 			if s > 0 and t > 0 and s + t <= 1:
-				uvx = int((w * uv_coordinate[0][0] + s * uv_coordinate[1][0] + t * uv_coordinate[2][0]) * texture.shape[0])
-				uvy = int((w * uv_coordinate[0][0] + s * uv_coordinate[1][1] + t * uv_coordinate[2][1]) * texture.shape[1])	
+				#We Divide By The Clip Space For Perspective Correct Texture Mapping
+				uvx = w * (uv_coordinate[0][0] / vertex_coordinate[0][3]) + s * (uv_coordinate[1][0] / vertex_coordinate[1][3]) + t * (uv_coordinate[2][0] / vertex_coordinate[2][3])
+				uvy = w * (uv_coordinate[0][1] / vertex_coordinate[0][3]) + s * (uv_coordinate[1][1] / vertex_coordinate[1][3]) + t * (uv_coordinate[2][1] / vertex_coordinate[2][3])
+
+				z = 1 / ((w * 1 / vertex_coordinate[0][3] + s * 1 / vertex_coordinate[1][3] + t * 1 / vertex_coordinate[2][3]))
+				#print(z)
+
+				uvx = int(uvx * texture.shape[0] * z)
+				uvy = int(uvy * texture.shape[1] * z)
 
 				screen_buffer[x][y] = texture[uvx][uvy]	
 
