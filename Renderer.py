@@ -2,7 +2,9 @@ import pygame
 import numba
 import numpy
 
-SIZE = (1280, 720)
+from OBJLoader import OBJ
+
+SIZE = (160 * 4, 90 * 4)
 
 pygame.init()
 
@@ -11,9 +13,9 @@ pygame.display.set_caption("Renderer")
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
 
-NEAR = .5
-FAR = 100.0
-FOV = 45
+NEAR = .1
+FAR = 1000.0
+FOV = 120
 
 aspect_ratio = SIZE[0] / SIZE[1]
 top = numpy.tan((FOV * .01745) / 2) * NEAR
@@ -35,13 +37,13 @@ projection_matrix[3][2] = -1 * ((2 * FAR * NEAR) / (FAR - NEAR))
 
 running = True
 
-triangle_test = (
-	(0.0, 0.5, -4.0, 1.0),
-	(-0.5, -0.5, -4.0, 1.0),
-	(0.5, -0.5, -4.0, 1.0)
+triangle_test_1 = (
+	(0.0, 0.5, -1.0, 1.0),
+	(-0.5, -0.5, -1.0, 1.0),
+	(0.5, -0.5, -1.0, 1.0)
 )
 
-triangle_test = (
+triangle_test_2 = (
 	(0.1, 0.1, -1.0, 1.0),
 	(0.1, -0.1, -1.5, 1.0),
 	(0.1, -0.1, -0.5, 1.0),
@@ -178,8 +180,8 @@ def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 	if len(vertex_list) > 0:
 		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 1, True)
 
-	if len(vertex_list) > 0:
-		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 2, False)
+	#if len(vertex_list) > 0:
+		#vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 2, True)
 
 	if len(vertex_list) > 0:
 		for coordinate in vertex_list:
@@ -241,8 +243,34 @@ def process_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 
 					screen_buffer[x][y] = texture[uvx][uvy]	
 
+@numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=True)
+def render_model(mesh_instance, mesh_uv, texture, screen_buffer):
+	for i in range(len(mesh_instance)):
+		#mesh_instance[i][0][0] += 1
+
+		render_triangle(mesh_instance[i], mesh_uv[i], texture, screen_buffer)
+
 image = pygame.image.load("Brick.bmp").convert()
+image_2 = pygame.image.load("Texture.png").convert()
 image_buffer = pygame.surfarray.pixels2d(image)
+image_2_buffer = pygame.surfarray.pixels2d(image_2)
+
+model = OBJ("Cube.obj")
+
+mesh_instance = []
+mesh_uv = []
+
+for face in model.faces:
+	v1 = [model.vertices[face[0][0] - 1][0], model.vertices[face[0][0] - 1][1], model.vertices[face[0][0] - 1][2] - 20, 1.0]
+	v2 = [model.vertices[face[0][1] - 1][0], model.vertices[face[0][1] - 1][1], model.vertices[face[0][1] - 1][2] - 20, 1.0]
+	v3 = [model.vertices[face[0][2] - 1][0], model.vertices[face[0][2] - 1][1], model.vertices[face[0][2] - 1][2] - 20, 1.0]
+
+	u1 = [model.texcoords[face[2][0] - 1][0], 1 - model.texcoords[face[2][0] - 1][1]]
+	u2 = [model.texcoords[face[2][1] - 1][0], 1 - model.texcoords[face[2][1] - 1][1]]
+	u3 = [model.texcoords[face[2][2] - 1][0], 1 - model.texcoords[face[2][2] - 1][1]]
+
+	mesh_instance.append([v1, v2, v3])
+	mesh_uv.append([u1, u2, u3])
 
 while running:
 	for event in pygame.event.get():
@@ -251,30 +279,55 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	triangle_test = (
+	triangle_test_1 = (
 		(
-			triangle_test[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .01,
-			triangle_test[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .01,
-			triangle_test[0][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .01,
-			triangle_test[0][3]
+			triangle_test_1[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
+			triangle_test_1[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
+			triangle_test_1[0][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test_1[0][3]
 		),
 
 		(
-			triangle_test[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .01,
-			triangle_test[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .01,
-			triangle_test[1][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .01,
-			triangle_test[1][3]
+			triangle_test_1[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
+			triangle_test_1[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
+			triangle_test_1[1][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test_1[1][3]
 		),
 
 		(
-			triangle_test[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .01,
-			triangle_test[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .01,
-			triangle_test[2][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .01,
-			triangle_test[2][3]
+			triangle_test_1[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
+			triangle_test_1[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
+			triangle_test_1[2][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test_1[2][3]
 		),
 	)
 
-	render_triangle(triangle_test, uv, image_buffer, screen_buffer)
+	triangle_test_2 = (
+		(
+			triangle_test_2[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
+			triangle_test_2[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
+			triangle_test_2[0][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test_2[0][3]
+		),
+
+		(
+			triangle_test_2[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
+			triangle_test_2[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
+			triangle_test_2[1][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test_2[1][3]
+		),
+
+		(
+			triangle_test_2[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
+			triangle_test_2[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
+			triangle_test_2[2][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test_2[2][3]
+		),
+	)
+
+	#render_model(mesh_instance, mesh_uv, image_buffer, screen_buffer)
+	render_triangle(triangle_test_1, uv, image_2_buffer, screen_buffer)
+	render_triangle(triangle_test_2, uv, image_buffer, screen_buffer)
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	pygame.display.flip()
