@@ -11,7 +11,7 @@ pygame.display.set_caption("Renderer")
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
 
-NEAR = .1
+NEAR = .5
 FAR = 100.0
 FOV = 45
 
@@ -42,9 +42,9 @@ running = True
 #)
 
 triangle_test = (
-	(0.1, 0.1, -2.0, 1.0),
-	(0.1, -0.1, -2.5, 1.0),
-	(0.1, -0.1, -1.5, 1.0),
+	(0.1, 0.1, -5.0, 1.0),
+	(0.1, -0.1, -5.5, 1.0),
+	(0.1, -0.1, -4.5, 1.0),
 )
 
 uv = (
@@ -91,28 +91,22 @@ def lerp_vertex(vertex, target, factor):
 	]
 
 @numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=True)
-def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
+def clip_triangle(clipped_coordinate, uv_coordinate, axis):
 	vertex_list = []
 	uv_list = []
 
-	normalized_coordinates = []
-
-	clipped_coordinate = get_clipped_coordinates(vertex_coordinate, projection_matrix)
-	#Thanks To The Clipped Coordinate We Can See Which Exact Coordinate The Triangle Will Leave The Screen
-	#With This We Will Now Clip The Triangle Into Multiple Triangles If Its Intersecting With The Clipping Coordinate
-	
 	previous_vertex = clipped_coordinate[len(clipped_coordinate) - 1]
-	previous_inside = previous_vertex[0] <= previous_vertex[3]
+	previous_inside = previous_vertex[axis] <= previous_vertex[3]
 	previous_uv = uv_coordinate[len(clipped_coordinate) - 1]
 
 	for index in range(len(clipped_coordinate)):
 		current_vertex = clipped_coordinate[index]
-		current_inside = current_vertex[0] <= current_vertex[3]
+		current_inside = current_vertex[axis] <= current_vertex[3]
 
 		if current_inside ^ previous_inside:
-			factor = (previous_vertex[3] - previous_vertex[0]) / (
-				(previous_vertex[3] - previous_vertex[0]) -
-				(current_vertex[3] - current_vertex[0])
+			factor = (previous_vertex[3] - previous_vertex[axis]) / (
+				(previous_vertex[3] - previous_vertex[axis]) -
+				(current_vertex[3] - current_vertex[axis])
 			)
 
 			vertex_list.append([
@@ -134,31 +128,58 @@ def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
 
 		previous_vertex = current_vertex
 		previous_inside = current_inside
-		previous_uv = uv_coordinate[index]
+		previous_uv = uv_coordinate[index]	
 
-	for coordinate in vertex_list:
-		normalized_coordinates.append(get_normalized_coordinate(coordinate))
+	return vertex_list, uv_list
 
-	#print(normalized_coordinates[1:4])
+@numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=False)
+def process_polygon(vertex_coordinate, uv_coordinate, texture, screen_buffer, index):
+	computed_triangle = (vertex_coordinate[0], vertex_coordinate[index + 1], vertex_coordinate[index + 2])
+	computed_uv = (uv_coordinate[0], uv_coordinate[index + 1], uv_coordinate[index + 2])
 
-	if len(normalized_coordinates) > 0:
-		process_triangle(normalized_coordinates[0:3], uv_list[0:3], texture, screen_buffer)
+	process_triangle(computed_triangle, computed_uv, texture, screen_buffer)
 
-		if len(normalized_coordinates) > 3:
+	if index + 3 < len(vertex_coordinate):
+		process_polygon(vertex_coordinate, uv_coordinate, texture, screen_buffer, index + 1)
+
+@numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=False)
+def render_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
+	vertex_list = []
+	uv_list = []
+
+	normalized_coordinates = []
+
+	clipped_coordinate = get_clipped_coordinates(vertex_coordinate, projection_matrix)
+	#Thanks To The Clipped Coordinate We Can See Which Exact Coordinate The Triangle Will Leave The Screen
+	#With This We Will Now Clip The Triangle Into Multiple Triangles If Its Intersecting With The Clipping Coordinate
+	
+	vertex_list, uv_list = clip_triangle(clipped_coordinate, uv_coordinate, 0)
+
+	if len(vertex_list) > 0:
+		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 1)
+
+	if len(vertex_list) > 0:
+		vertex_list, uv_list = clip_triangle(vertex_list, uv_list, 2)
+
+	if len(vertex_list) > 0:
+		for coordinate in vertex_list:
+			normalized_coordinates.append(get_normalized_coordinate(coordinate))
+
+		#Simple Polygon Rendering
+		for index in range(len(normalized_coordinates) - 2):
 			second_triangle = (
 				normalized_coordinates[0],
-				normalized_coordinates[2],
-				normalized_coordinates[3]
+				normalized_coordinates[index + 1],
+				normalized_coordinates[index + 2]
 			)
 
 			second_uv = (
 				uv_list[0],
-				uv_list[2],
-				uv_list[3]
+				uv_list[index + 1],
+				uv_list[index + 2]
 			)
 
 			process_triangle(second_triangle, second_uv, texture, screen_buffer)
-
 
 @numba.jit(parallel=False, nogil=True, cache=True, nopython=False, fastmath=True)
 def process_triangle(vertex_coordinate, uv_coordinate, texture, screen_buffer):
@@ -200,23 +221,23 @@ while running:
 
 	triangle_test = (
 		(
-			triangle_test[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
-			triangle_test[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
-			triangle_test[0][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test[0][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .01,
+			triangle_test[0][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .01,
+			triangle_test[0][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .01,
 			triangle_test[0][3]
 		),
 
 		(
-			triangle_test[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
-			triangle_test[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
-			triangle_test[1][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test[1][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .01,
+			triangle_test[1][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .01,
+			triangle_test[1][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .01,
 			triangle_test[1][3]
 		),
 
 		(
-			triangle_test[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .002,
-			triangle_test[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .002,
-			triangle_test[2][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .002,
+			triangle_test[2][0] + (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .01,
+			triangle_test[2][1] + (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .01,
+			triangle_test[2][2] + (keys[pygame.K_s] - keys[pygame.K_w]) * .01,
 			triangle_test[2][3]
 		),
 	)
