@@ -6,11 +6,11 @@ import pygame
 
 SIZE = (320, 240)
 
-@functools.cache
+#@functools.cache
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
 
-@functools.cache
+#@functools.cache
 def matrix_multiply(x, y):
 	return [[sum(a*b for a,b in zip(x_row,y_col)) for y_col in zip(*y)] for x_row in x]
 
@@ -35,16 +35,24 @@ class Vertex:
 		self.z = z
 		self.w = w
 
-	@functools.cache
+	#@functools.cache
 	def get_matrix(self):
 		return (
-			(self.x, 0, 0, 0),
-			(0, self.y, 0, 0),
-			(0, 0, self.z, 0),
-			(0, 0, 0, self.w)
+			(self.x, self.y, self.z, self.w),
 		)
 
-	@functools.cache
+	#@functools.cache
+	def matrix_multiply(self, matrix):
+		vertex = matrix_multiply(self.get_matrix(), matrix)
+		return Vertex(vertex[0][0], vertex[0][1], vertex[0][2], vertex[0][3])
+
+	#@functools.cache
+	def convert_to_screen_space(self, size):
+		return Vertex(
+			((self.x + 1) * size[0]) / 2, ((-self.y + 1) * size[1]) / 2, self.z, self.w
+		)
+
+	#@functools.cache
 	def lerp(self, vertex, factor):
 		return (
 			lerp(self.x, vertex.x, factor),
@@ -59,14 +67,7 @@ class UV:
 		self.x = x
 		self.y = y
 
-	@functools.cache
-	def get_matrix(self):
-		return (
-			(self.x, 0),
-			(0, self.y)
-		)
-
-	@functools.cache
+	#@functools.cache
 	def lerp(self, uv, factor):
 		return (
 			lerp(self.x, uv.x, factor),
@@ -78,20 +79,46 @@ class Triangle:
 		self.vertex = vertex
 		self.uv = uv
 
-	@functools.cache
+	#@functools.cache
 	def matrix_multiply(self, matrix):
-		return (
-			matrix_multiply(self.vertex[0].get_matrix(), matrix),
-			matrix_multiply(self.vertex[1].get_matrix(), matrix),
-			matrix_multiply(self.vertex[2].get_matrix(), matrix)
+		return Triangle(
+			(
+				self.vertex[0].matrix_multiply(matrix),
+				self.vertex[1].matrix_multiply(matrix),
+				self.vertex[2].matrix_multiply(matrix),
+			),
+
+			self.uv
 		)
 
-pygame.init()
+	#@functools.cache
+	def convert_to_screen_space(self, size):
+		return Triangle(
+			(
+				self.vertex[0].convert_to_screen_space(size),
+				self.vertex[1].convert_to_screen_space(size),
+				self.vertex[2].convert_to_screen_space(size)
+			),
+
+			self.uv
+		)
+
 screen_buffer = zeros(SIZE, dtype=int32)
+
+@functools.cache
+def render_triangle(triangle, texture):
+	for x in range(screen_buffer.shape[0]):
+		for y in range(screen_buffer.shape[1]):
+			screen_buffer[x][y] = 255
+
+pygame.init()
+
 projection_matrix = create_projection_matrix(90, .1, 1000, SIZE)
-screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=False)
 
 running = True
+clock = pygame.time.Clock()
+font = pygame.font.SysFont("Monospace" , 24 , bold = False)
 
 triangle = Triangle(
 	(
@@ -107,19 +134,23 @@ triangle = Triangle(
 	)
 )
 
-iteration = 0
-
 while running:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			running = False
 
 	keys = pygame.key.get_pressed()
-	triangle.matrix_multiply(projection_matrix)
 
+	render_triangle(triangle, None)
+
+	print(screen_buffer)
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
+	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
+
+	
 	pygame.display.flip()
 
+	clock.tick()
 	screen_buffer.fill(0)
 
 pygame.quit()
