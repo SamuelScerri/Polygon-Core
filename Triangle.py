@@ -22,8 +22,6 @@ class Triangle:
 		self.uv_b = uv_b
 		self.uv_c = uv_c
 
-
-
 	def matrix_multiply(self, matrix):
 		return Triangle(
 			self.vertex_a.matrix_multiply(matrix),

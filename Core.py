@@ -8,7 +8,7 @@ from Triangle import Triangle
 from Vertex import Vertex
 from UV import UV
 
-SIZE = (1280, 720)
+SIZE = (320, 180)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
@@ -29,15 +29,21 @@ def create_projection_matrix(fov, near, far, size):
 
 #This Function Is Responsible Only For Rendering The Triangle
 @numba.njit
-def render_triangle(triangle, screen_buffer):
+def render_triangle(triangle, texture, screen_buffer):
 	vertex_span_1, vertex_span_2, span = triangle.get_vertex_span()
 
 	for x in range(screen_buffer.shape[0]):
 		for y in range(screen_buffer.shape[1]):
 			s, t, w = triangle.get_barycentric_coordinates(vertex_span_1, vertex_span_2, span, x, y)
 
+			#If The Current Point Is In The Triangle, Then We Render It
 			if s > 0 and t > 0 and s + t <= 1:
-				screen_buffer[x][y] = 255
+				#Texture Mapping With Perspective Correction
+				uv_x = w * (triangle.uv_a.x / triangle.vertex_a.w) + s * (triangle.uv_b.x / triangle.vertex_b.w) + t * (triangle.uv_c.x / triangle.vertex_c.w)
+				uv_y = w * (triangle.uv_a.y / triangle.vertex_a.w) + s * (triangle.uv_b.y / triangle.vertex_b.w) + t * (triangle.uv_c.y / triangle.vertex_c.w)
+				z = 1 / (w * 1 / triangle.vertex_a.w + s * 1 / triangle.vertex_b.w + t * 1 / triangle.vertex_c.w)
+
+				screen_buffer[x][y] = texture[int(uv_x * texture.shape[0] * z)][int(uv_y * texture.shape[1] * z)]
 
 pygame.init()
 
@@ -60,10 +66,16 @@ triangle = Triangle(
 	UV(+0.5, +0.5)
 )
 
+texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
+
 while running:
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			running = False
+
+	#triangle.vertex_a.z += .001
+	#triangle.vertex_b.z += .001
+	#triangle.vertex_c.z += .001
 
 	keys = pygame.key.get_pressed()
 
@@ -71,7 +83,7 @@ while running:
 	new_triangle.normalize()
 	new_triangle.convert_to_screen_space(screen_buffer.shape)
 
-	render_triangle(new_triangle, screen_buffer)
+	render_triangle(new_triangle, texture, screen_buffer)
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
