@@ -32,3 +32,14 @@ class Vertex:
 		self.x /= self.w
 		self.y /= self.w
 		self.z /= self.w
+
+	def interpolate(self, vertex, factor):
+		return Vertex(
+			self.x * (1 - factor) + vertex.x * factor,
+			self.y * (1 - factor) + vertex.y * factor,
+			self.z * (1 - factor) + vertex.z * factor,
+			self.w * (1 - factor) + vertex.w * factor
+		)
+
+	def copy(self):
+		return Vertex(self.x, self.y, self.z, self.w)

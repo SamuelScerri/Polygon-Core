@@ -8,3 +8,9 @@ class UV:
 	def __init__(self, x, y):
 		self.x = x
 		self.y = y
+
+	def interpolate(self, uv, factor):
+		return UV(
+			self.x * (1 - factor) +  uv.x * factor,
+			self.y * (1 - factor) +  uv.y * factor,
+		)

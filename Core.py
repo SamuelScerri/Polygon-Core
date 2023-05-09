@@ -73,17 +73,27 @@ while running:
 		if event.type == pygame.QUIT:
 			running = False
 
-	#triangle.vertex_a.z += .001
-	#triangle.vertex_b.z += .001
-	#triangle.vertex_c.z += .001
-
 	keys = pygame.key.get_pressed()
 
-	new_triangle = triangle.matrix_multiply(projection_matrix)
-	new_triangle.normalize()
-	new_triangle.convert_to_screen_space(screen_buffer.shape)
+	triangle.vertex_a.x += .001 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
+	triangle.vertex_b.x += .001 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
+	triangle.vertex_c.x += .001 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
 
-	render_triangle(new_triangle, texture, screen_buffer)
+	triangle.vertex_a.y += .001 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
+	triangle.vertex_b.y += .001 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
+	triangle.vertex_c.y += .001 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
+
+	triangle.vertex_a.z += .001 * (keys[pygame.K_s] - keys[pygame.K_w])
+	triangle.vertex_b.z += .001 * (keys[pygame.K_s] - keys[pygame.K_w])
+	triangle.vertex_c.z += .001 * (keys[pygame.K_s] - keys[pygame.K_w])
+
+	new_triangle = triangle.matrix_multiply(projection_matrix)
+	clipped_triangles = new_triangle.clip()
+
+	print(len(clipped_triangles))
+
+	for t in range(len(clipped_triangles)):
+		render_triangle(clipped_triangles[t], texture, screen_buffer)
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
