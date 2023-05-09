@@ -8,7 +8,7 @@ from Triangle import Triangle
 from Vertex import Vertex
 from UV import UV
 
-SIZE = (320, 240)
+SIZE = (640, 360)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
@@ -65,7 +65,11 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	render_triangle(triangle.matrix_multiply(projection_matrix).normalize().convert_to_screen_space(screen_buffer.shape), screen_buffer)
+	new_triangle = triangle.matrix_multiply(projection_matrix)
+	new_triangle.normalize()
+	new_triangle.convert_to_screen_space(screen_buffer.shape)
+
+	render_triangle(new_triangle, screen_buffer)
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))

@@ -25,7 +25,10 @@ class Vertex:
 		)
 
 	def convert_to_screen_space(self, size):
-		return Vertex(((self.x + 1) * size[0]) / 2, ((-self.y + 1) * size[1]) / 2, self.z, self.w)
+		self.x = ((self.x + 1) * size[0]) / 2
+		self.y = ((-self.y + 1) * size[1]) / 2
 
 	def normalize(self):
-		return Vertex(self.x / self.w, self.y / self.w, self.z / self.w, self.w)
+		self.x /= self.w
+		self.y /= self.w
+		self.z /= self.w

@@ -34,26 +34,14 @@ class Triangle:
 		)
 
 	def convert_to_screen_space(self, size):
-		return Triangle(
-			self.vertex_a.convert_to_screen_space(size),
-			self.vertex_b.convert_to_screen_space(size),
-			self.vertex_c.convert_to_screen_space(size),
-
-			self.uv_a,
-			self.uv_b,
-			self.uv_c
-		)
+		self.vertex_a.convert_to_screen_space(size)
+		self.vertex_b.convert_to_screen_space(size)
+		self.vertex_c.convert_to_screen_space(size)
 
 	def normalize(self):
-		return Triangle(
-			self.vertex_a.normalize(),
-			self.vertex_b.normalize(),
-			self.vertex_c.normalize(),
-
-			self.uv_a,
-			self.uv_b,
-			self.uv_c
-		)
+		self.vertex_a.normalize()
+		self.vertex_b.normalize()
+		self.vertex_c.normalize()
 
 	def get_barycentric_coordinates(self, x, y):
 		vertex_span_1 = (self.vertex_b.x - self.vertex_a.x, self.vertex_b.y - self.vertex_a.y)
