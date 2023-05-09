@@ -49,7 +49,7 @@ def render_triangle(triangle, texture, screen_buffer):
 pygame.init()
 
 projection_matrix = create_projection_matrix(90, .1, 1000, SIZE)
-screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=False)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
 
@@ -80,20 +80,20 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	triangle.vertex_a.x += .001 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
-	triangle.vertex_b.x += .001 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
-	triangle.vertex_c.x += .001 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
+	triangle.vertex_a.x += .002 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
+	triangle.vertex_b.x += .002 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
+	triangle.vertex_c.x += .002 * (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
 
-	triangle.vertex_a.y += .001 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
-	triangle.vertex_b.y += .001 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
-	triangle.vertex_c.y += .001 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
+	triangle.vertex_a.y += .002 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
+	triangle.vertex_b.y += .002 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
+	triangle.vertex_c.y += .002 * (keys[pygame.K_UP] - keys[pygame.K_DOWN])
 
-	triangle.vertex_a.z += .001 * (keys[pygame.K_s] - keys[pygame.K_w])
-	triangle.vertex_b.z += .001 * (keys[pygame.K_s] - keys[pygame.K_w])
-	triangle.vertex_c.z += .001 * (keys[pygame.K_s] - keys[pygame.K_w])
+	triangle.vertex_a.z += .004 * (keys[pygame.K_s] - keys[pygame.K_w])
+	triangle.vertex_b.z += .004 * (keys[pygame.K_s] - keys[pygame.K_w])
+	triangle.vertex_c.z += .004 * (keys[pygame.K_s] - keys[pygame.K_w])
 
 	new_triangle = triangle.matrix_multiply(projection_matrix)
-	clipped_triangles = new_triangle.clip()
+	clipped_triangles = new_triangle.clip(SIZE)
 
 	for t in range(len(clipped_triangles)):
 		render_triangle(clipped_triangles[t], texture, screen_buffer)

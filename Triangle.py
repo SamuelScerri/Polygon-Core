@@ -124,7 +124,7 @@ class Triangle:
 		return vertex_list, uv_list
 
 	#Note, This Is A Very Expensive Operation, This Will Also Normalize Every Vertex And Convert It To Screen-Space Automatically
-	def clip(self):
+	def clip(self, size):
 		#We Convert To A Tuple For Cleaner Code
 		vertex_data = (self.vertex_a, self.vertex_b, self.vertex_c)
 		uv_data = (self.uv_a, self.uv_b, self.uv_c)
@@ -146,7 +146,7 @@ class Triangle:
 		if len(vertex_data) > 0:
 			for v in vertex_data:
 				v.normalize()
-				v.convert_to_screen_space((320, 180))
+				v.convert_to_screen_space(size)
 
 			for index in range(len(vertex_data) - 2):
 				triangles.append(
