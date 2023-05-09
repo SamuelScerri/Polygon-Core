@@ -22,6 +22,8 @@ class Triangle:
 		self.uv_b = uv_b
 		self.uv_c = uv_c
 
+
+
 	def matrix_multiply(self, matrix):
 		return Triangle(
 			self.vertex_a.matrix_multiply(matrix),
@@ -33,6 +35,13 @@ class Triangle:
 			self.uv_c
 		)
 
+	def get_vertex_span(self):
+		vertex_span_1 = (self.vertex_b.x - self.vertex_a.x, self.vertex_b.y - self.vertex_a.y)
+		vertex_span_2 = (self.vertex_c.x - self.vertex_a.x, self.vertex_c.y - self.vertex_a.y)
+		span = vertex_span_1[0] * vertex_span_2[1] - vertex_span_1[1] * vertex_span_2[0]
+
+		return vertex_span_1, vertex_span_2, span
+
 	def convert_to_screen_space(self, size):
 		self.vertex_a.convert_to_screen_space(size)
 		self.vertex_b.convert_to_screen_space(size)
@@ -43,12 +52,7 @@ class Triangle:
 		self.vertex_b.normalize()
 		self.vertex_c.normalize()
 
-	def get_barycentric_coordinates(self, x, y):
-		vertex_span_1 = (self.vertex_b.x - self.vertex_a.x, self.vertex_b.y - self.vertex_a.y)
-		vertex_span_2 = (self.vertex_c.x - self.vertex_a.x, self.vertex_c.y - self.vertex_a.y)
-
-		span = vertex_span_1[0] * vertex_span_2[1] - vertex_span_1[1] * vertex_span_2[0]
-
+	def get_barycentric_coordinates(self, vertex_span_1, vertex_span_2, span, x, y):
 		q = (x - self.vertex_a.x, y - self.vertex_a.y)
 		s = (q[0] * vertex_span_2[1] - q[1] * vertex_span_2[0]) / span
 		t = (vertex_span_1[0] * q[1] - vertex_span_1[1] * q[0]) / span

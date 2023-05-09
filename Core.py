@@ -8,7 +8,7 @@ from Triangle import Triangle
 from Vertex import Vertex
 from UV import UV
 
-SIZE = (640, 360)
+SIZE = (1280, 720)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
@@ -30,9 +30,11 @@ def create_projection_matrix(fov, near, far, size):
 #This Function Is Responsible Only For Rendering The Triangle
 @numba.njit
 def render_triangle(triangle, screen_buffer):
+	vertex_span_1, vertex_span_2, span = triangle.get_vertex_span()
+
 	for x in range(screen_buffer.shape[0]):
 		for y in range(screen_buffer.shape[1]):
-			s, t, w = triangle.get_barycentric_coordinates(x, y)
+			s, t, w = triangle.get_barycentric_coordinates(vertex_span_1, vertex_span_2, span, x, y)
 
 			if s > 0 and t > 0 and s + t <= 1:
 				screen_buffer[x][y] = 255
