@@ -63,12 +63,11 @@ class Triangle:
 
 		previous_vertex = vertex_data[len(vertex_data) - 1]
 
-		match axis:
-			case 0:
-				previous_component = previous_vertex.x
-			case 1:
-				previous_component = previous_vertex.y
-			case 2:
+		if axis == 0:
+			previous_component = previous_vertex.x
+		elif axis == 1:
+			previous_component = previous_vertex.y
+		elif axis == 2:
 				previous_component = previous_vertex.z		
 
 		if opposite:
@@ -81,16 +80,15 @@ class Triangle:
 		for vertex in range(len(vertex_data)):
 			current_vertex = vertex_data[vertex]
 
-			match axis:
-				case 0:
-					current_component = current_vertex.x
-					previous_component = previous_vertex.x
-				case 1:
-					current_component = current_vertex.y
-					previous_component = previous_vertex.y
-				case 2:
-					current_component = current_vertex.z
-					previous_component = previous_vertex.z				
+			if axis == 0:
+				current_component = current_vertex.x
+				previous_component = previous_vertex.x
+			elif axis == 1:
+				current_component = current_vertex.y
+				previous_component = previous_vertex.y
+			elif axis == 2:
+				current_component = current_vertex.z
+				previous_component = previous_vertex.z				
 
 			if opposite:
 				current_inside = current_component >= -current_vertex.w

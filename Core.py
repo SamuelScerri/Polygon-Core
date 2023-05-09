@@ -8,7 +8,7 @@ from Triangle import Triangle
 from Vertex import Vertex
 from UV import UV
 
-SIZE = (320, 180)
+SIZE = (640, 360)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
@@ -55,7 +55,7 @@ screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
 
 running = True
 clock = pygame.time.Clock()
-font = pygame.font.SysFont("Monospace" , 24 , bold = False)
+font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 
 triangle = Triangle(
 	#Vertex(+0.0, +0.5, -4.0),
