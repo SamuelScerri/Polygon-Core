@@ -61,12 +61,12 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 						depth_buffer[x][y] = depth
 
 @numba.njit
-def render_triangles(triangles, texture, screen_buffer, depth_buffer):
+def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix):
 	for triangle in triangles:
 		new_triangle = triangle.copy()
 
-		new_triangle.matrix_multiply(projection_matrix)
-		clipped_triangles = new_triangle.clip(SIZE)
+		new_triangle.matrix_multiply(matrix)
+		clipped_triangles = new_triangle.clip(screen_buffer.shape)
 
 		for t in range(len(clipped_triangles)):
 			render_triangle(clipped_triangles[t], texture, screen_buffer, depth_buffer)
@@ -110,7 +110,7 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer)
+	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix)
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
