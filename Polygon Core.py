@@ -107,6 +107,7 @@ def process_triangle(clipped: Triangle, ts: Triangle, image_buffer, screen_buffe
 				w = (1 - s - t)
 
 				depth = w * screen.v1.z + s * screen.v2.z + t * screen.v3.z
+				print(depth)
 
 				#Here We Convert The RGB Value To A Color Integer, Then It Is Assigned To The Screen Buffer
 				if depth > depth_buffer[x][y]:
