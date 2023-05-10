@@ -9,7 +9,7 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (320, 180)
+SIZE = (640, 360)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
