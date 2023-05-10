@@ -9,6 +9,7 @@ from typing import List
 from functools import cache
 
 class Utility:
+	@cache
 	def __init__(self, filename):
 		self.vertex_data = []
 		self.uv_data = []
@@ -50,6 +51,7 @@ class Utility:
 
 				self.face_data.append((faces, uv_data))
 
+	@cache
 	def build_triangle_data(self):
 		for face in self.face_data:
 			vertex_a = self.vertex_data[face[0][0] - 1].copy()

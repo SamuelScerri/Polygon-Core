@@ -9,21 +9,21 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (640, 360)
+SIZE = (320, 180)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
 
 def create_projection_matrix(fov, near, far, size):
 	aspect_ratio = size[0] / size[1]
-	top = math.tan(math.radians(fov) / 2) * near
-	bottom = -top * aspect_ratio
+	top = math.tan(math.radians(fov) / 2)
+	bottom = -top
 	right = top * aspect_ratio
 	left = bottom
 
 	return (
-		((2 * near) / (right - left), 0, (right + left) / (right - left), 0),
-		(0, (2 * near) / (top - bottom), (top + bottom) / (top - bottom), 0),
+		(1 / right, 0, 0, 0),
+		(0, 1 / top, 0, 0),
 		(0, 0,-(far + near) / (far - near),-(2 * far * near) / (far - near)),
 		(0, 0, -1, 0)
 	)
