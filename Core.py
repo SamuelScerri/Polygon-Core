@@ -42,7 +42,9 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 				if s > 0 and t > 0 and s + t <= 1:
 					#print(triangle.vertex_a.w)
 
-					depth = w * triangle.vertex_a.z + s * triangle.vertex_b.z + t * triangle.vertex_c.z
+					#depth = w * triangle.vertex_a.w + s * triangle.vertex_b.w + t * triangle.vertex_c.w
+
+					depth = w * (1 / triangle.vertex_a.z) + s * (1 / triangle.vertex_b.z) + t * (1 / triangle.vertex_c.z)
 
 					#print(depth_buffer[x][y], depth)
 

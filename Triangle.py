@@ -71,9 +71,9 @@ class Triangle:
 				previous_component = previous_vertex.z		
 
 		if opposite:
-			previous_inside = previous_component >= previous_vertex.w
+			previous_inside = previous_component >= -previous_vertex.w
 		else:
-			previous_inside = previous_component <= -previous_vertex.w
+			previous_inside = previous_component <= previous_vertex.w
 
 		previous_uv = uv_data[len(uv_data) - 1]
 
@@ -91,9 +91,9 @@ class Triangle:
 				previous_component = previous_vertex.z				
 
 			if opposite:
-				current_inside = current_component >= current_vertex.w
+				current_inside = current_component >= -current_vertex.w
 			else:
-				current_inside = current_component <= -current_vertex.w
+				current_inside = current_component <= current_vertex.w
 			current_uv = uv_data[vertex]
 
 			if current_inside ^ previous_inside:
