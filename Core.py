@@ -9,7 +9,7 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (640, 360)
+SIZE = (320, 180)
 
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
@@ -32,29 +32,32 @@ def create_projection_matrix(fov, near, far, size):
 @numba.njit
 def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 	vertex_span_1, vertex_span_2, span = triangle.get_vertex_span()
+	max_x, min_x, max_y, min_y = triangle.get_boundaries()
+
+	normalized_uv_a = (triangle.uv_a.x / triangle.vertex_a.w, triangle.uv_a.y / triangle.vertex_a.w)
+	normalized_uv_b = (triangle.uv_b.x / triangle.vertex_b.w, triangle.uv_b.y / triangle.vertex_b.w)
+	normalized_uv_c = (triangle.uv_c.x / triangle.vertex_c.w, triangle.uv_c.y / triangle.vertex_c.w)
+
+	inverse_vertex_a = 1 / triangle.vertex_a.w
+	inverse_vertex_b = 1 / triangle.vertex_b.w
+	inverse_vertex_c = 1 / triangle.vertex_c.w
 
 	if span != 0:
-		for x in range(screen_buffer.shape[0]):
-			for y in range(screen_buffer.shape[1]):
+		for x in range(min_x, max_x):
+			for y in range(min_y, max_y):
 				s, t, w = triangle.get_barycentric_coordinates(vertex_span_1, vertex_span_2, span, x, y)
 
 				#If The Current Point Is In The Triangle, Then We Render It
 				if s > 0 and t > 0 and s + t <= 1:
-					#print(triangle.vertex_a.w)
-
-					#depth = w * triangle.vertex_a.w + s * triangle.vertex_b.w + t * triangle.vertex_c.w
-
-					depth = w * (1 / triangle.vertex_a.z) + s * (1 / triangle.vertex_b.z) + t * (1 / triangle.vertex_c.z)
-
-					#print(depth_buffer[x][y], depth)
+					depth = w * inverse_vertex_a + s * inverse_vertex_b + t * inverse_vertex_c
 
 					if depth > depth_buffer[x][y]:
 						#Texture Mapping With Perspective Correction
-						uv_x = w * (triangle.uv_a.x / triangle.vertex_a.w) + s * (triangle.uv_b.x / triangle.vertex_b.w) + t * (triangle.uv_c.x / triangle.vertex_c.w)
-						uv_y = w * (triangle.uv_a.y / triangle.vertex_a.w) + s * (triangle.uv_b.y / triangle.vertex_b.w) + t * (triangle.uv_c.y / triangle.vertex_c.w)
-						z = 1 / (w * 1 / triangle.vertex_a.w + s * 1 / triangle.vertex_b.w + t * 1 / triangle.vertex_c.w)
+						uv_x = w * normalized_uv_a[0] + s * normalized_uv_b[0] + t * normalized_uv_c[0]
+						uv_y = w * normalized_uv_a[1] + s * normalized_uv_b[1] + t * normalized_uv_c[1]
+						z = 1 / (w * inverse_vertex_a + s * inverse_vertex_b + t * inverse_vertex_c)
 
-						screen_buffer[x][y] = texture[int(uv_x * texture.shape[0] * z)][int(uv_y * texture.shape[1] * z)]
+						screen_buffer[x][y] = texture[int(uv_x * texture.shape[0] * z)][int(1 - uv_y * texture.shape[1] * z)]
 						depth_buffer[x][y] = depth
 
 @numba.njit
@@ -70,7 +73,7 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer):
 pygame.init()
 
 projection_matrix = create_projection_matrix(90, .1, 1000, SIZE)
-screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=False)
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
@@ -93,10 +96,10 @@ triangle = Triangle(
 	UV(+0.5, +0.5)
 )
 
-model = Utility("Cube.obj")
+model = Utility("player.obj")
 model.build_triangle_data()
 
-texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
+texture = pygame.surfarray.pixels2d(pygame.image.load("player_0.png").convert())
 
 while running:
 	for event in pygame.event.get():

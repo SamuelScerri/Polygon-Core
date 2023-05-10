@@ -121,6 +121,15 @@ class Triangle:
 
 		return vertex_list, uv_list
 
+	def get_boundaries(self):
+		max_x = max(self.vertex_a.x, max(self.vertex_b.x, self.vertex_c.x))
+		min_x = min(self.vertex_a.x, min(self.vertex_b.x, self.vertex_c.x))
+
+		max_y = max(self.vertex_a.y, max(self.vertex_b.y, self.vertex_c.y))
+		min_y = min(self.vertex_a.y, min(self.vertex_b.y, self.vertex_c.y))
+
+		return max_x, min_x, max_y, min_y
+
 	#Note, This Is A Very Expensive Operation, This Will Also Normalize Every Vertex And Convert It To Screen-Space Automatically
 	def clip(self, size):
 		#We Convert To A Tuple For Cleaner Code
