@@ -127,30 +127,16 @@ running = True
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 
-triangle = Triangle(
-	#Vertex(+0.0, +0.5, -4.0),
-	#Vertex(-0.5, -0.5, -4.0),
-	#Vertex(+0.5, -0.5, -4.0),
-
-	Vertex(+0.1, +0.1, -1.0),
-	Vertex(+0.1, -0.1, -1.5),
-	Vertex(+0.1, -0.1, -0.5),
-
-	UV(-0.5, -0.5),
-	UV(+0.5, -0.5),
-	UV(+0.5, +0.5)
-)
-
-model = Utility("Cube.obj")
+model = Utility("player.obj")
 model.build_triangle_data()
 
-z = 0
+z = 3
 x = 0
 y = 0
 r = 0
 q = 0
 
-texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
+texture = pygame.surfarray.pixels2d(pygame.image.load("player_0.png").convert())
 
 while running:
 	for event in pygame.event.get():
@@ -159,26 +145,25 @@ while running:
 
 	keys = pygame.key.get_pressed()
 
-	#print(r)
-
 	x += (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * .1
 	y += (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .1
 	z += (keys[pygame.K_w] - keys[pygame.K_s]) * .1
 
 	r += (keys[pygame.K_d] - keys[pygame.K_a]) * .4
-	#q += (keys[pygame.K_r] - keys[pygame.K_f]) * .001
 
 	transformation_queue = []
 
-	unit_vector = Vertex(x, y, z)
-	#unit_vector = unit_vector.normalized()
+	rv = Vertex(1, 1, 1)
+	rv = rv.normalized()
 
-	cross_vector = unit_vector.cross(Vertex(x, y, z))
+	p = Vertex(x, y, z)
+
+	cross = rv.cross(p)
 
 	world_matrix = create_translation_matrix(Vertex(x, y, z))
-	#world_matrix = quick_matrices_multiply(create_rotation_matrix(r, -unit_vector.x, -unit_vector.y, 0), world_matrix)
+	#world_matrix = quick_matrices_multiply(create_rotation_matrix(r, 1, 0, 0), world_matrix)
+	world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), world_matrix)
 	
-	#transformation_queue.append(create_translation_matrix(Vertex(0, 0, 64)))
 	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)

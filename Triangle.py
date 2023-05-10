@@ -50,10 +50,10 @@ class Triangle:
 		self.vertex_b.convert_to_screen_space(size)
 		self.vertex_c.convert_to_screen_space(size)
 
-	def normalize(self):
-		self.vertex_a.normalize()
-		self.vertex_b.normalize()
-		self.vertex_c.normalize()
+	def convert_to_normalized_device_coordinates(self):
+		self.vertex_a.convert_to_normalized_device_coordinates()
+		self.vertex_b.convert_to_normalized_device_coordinates()
+		self.vertex_c.convert_to_normalized_device_coordinates()
 
 	def get_barycentric_coordinates(self, vertex_span_1, vertex_span_2, span, x, y):
 		q = (x - self.vertex_a.x, y - self.vertex_a.y)
@@ -157,7 +157,7 @@ class Triangle:
 
 		if len(vertex_data) > 0:
 			for v in vertex_data:
-				v.normalize()
+				v.convert_to_normalized_device_coordinates()
 				v.convert_to_screen_space(size)
 
 			for index in range(len(vertex_data) - 2):

@@ -34,14 +34,18 @@ class Vertex:
 		self.x = ((self.x + 1) * size[0]) / 2
 		self.y = ((-self.y + 1) * size[1]) / 2
 
-	def normalize(self):
+	def convert_to_normalized_device_coordinates(self):
 		self.x /= self.w
 		self.y /= self.w
 		self.z /= self.w
 
 	def normalized(self):
-		magnitude = 1 / math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
-		return Vertex(self.x * magnitude, self.y * magnitude, self.z * magnitude, self.w)
+		if math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z) == 0:
+			return self.copy()
+
+		else:
+			magnitude = 1 / math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+			return Vertex(self.x * magnitude, self.y * magnitude, self.z * magnitude, self.w)
 
 	def dot(self, vertex):
 		return self.x * vertex.x + self.y * vertex.y + self.z * vertex.z
