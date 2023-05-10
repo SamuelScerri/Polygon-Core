@@ -9,6 +9,9 @@ class UV:
 		self.x = x
 		self.y = y
 
+	def copy(self):
+		return UV(self.x, self.y)
+
 	def interpolate(self, uv, factor):
 		return UV(
 			self.x * (1 - factor) +  uv.x * factor,

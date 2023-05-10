@@ -23,15 +23,9 @@ class Triangle:
 		self.uv_c = uv_c
 
 	def matrix_multiply(self, matrix):
-		return Triangle(
-			self.vertex_a.matrix_multiply(matrix),
-			self.vertex_b.matrix_multiply(matrix),
-			self.vertex_c.matrix_multiply(matrix),
-
-			self.uv_a,
-			self.uv_b,
-			self.uv_c
-		)
+		self.vertex_a.matrix_multiply(matrix)
+		self.vertex_b.matrix_multiply(matrix)
+		self.vertex_c.matrix_multiply(matrix)
 
 	def get_vertex_span(self):
 		vertex_span_1 = (self.vertex_b.x - self.vertex_a.x, self.vertex_b.y - self.vertex_a.y)
@@ -39,6 +33,17 @@ class Triangle:
 		span = vertex_span_1[0] * vertex_span_2[1] - vertex_span_1[1] * vertex_span_2[0]
 
 		return vertex_span_1, vertex_span_2, span
+
+	def copy(self):
+		return Triangle(
+			self.vertex_a.copy(),
+			self.vertex_b.copy(),
+			self.vertex_c.copy(),
+
+			self.uv_a.copy(),
+			self.uv_b.copy(),
+			self.uv_c.copy()
+		)
 
 	def convert_to_screen_space(self, size):
 		self.vertex_a.convert_to_screen_space(size)

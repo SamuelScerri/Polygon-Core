@@ -17,12 +17,10 @@ class Vertex:
 		return(self.x, self.y, self.z, self.w)
 
 	def matrix_multiply(self, matrix):
-		return Vertex(
-			(self.x * matrix[0][0]) + (self.y * matrix[1][0]) + (self.z * matrix[2][0]) + (self.w * matrix[3][0]),
-			(self.x * matrix[0][1]) + (self.y * matrix[1][1]) + (self.z * matrix[2][1]) + (self.w * matrix[3][1]),
-			(self.x * matrix[0][2]) + (self.y * matrix[1][2]) + (self.z * matrix[2][2]) + (self.w * matrix[3][2]),
-			(self.x * matrix[0][3]) + (self.y * matrix[1][3]) + (self.z * matrix[2][3]) + (self.w * matrix[3][3])
-		)
+		self.x = (self.x * matrix[0][0]) + (self.y * matrix[1][0]) + (self.z * matrix[2][0]) + (self.w * matrix[3][0])
+		self.y = (self.x * matrix[0][1]) + (self.y * matrix[1][1]) + (self.z * matrix[2][1]) + (self.w * matrix[3][1])
+		self.z = (self.x * matrix[0][2]) + (self.y * matrix[1][2]) + (self.z * matrix[2][2]) + (self.w * matrix[3][2])
+		self.w = (self.x * matrix[0][3]) + (self.y * matrix[1][3]) + (self.z * matrix[2][3]) + (self.w * matrix[3][3])
 
 	def convert_to_screen_space(self, size):
 		self.x = ((self.x + 1) * size[0]) / 2

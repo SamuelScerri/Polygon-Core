@@ -63,7 +63,9 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 @numba.njit
 def render_triangles(triangles, texture, screen_buffer, depth_buffer):
 	for triangle in triangles:
-		new_triangle = triangle.matrix_multiply(projection_matrix)
+		new_triangle = triangle.copy()
+
+		new_triangle.matrix_multiply(projection_matrix)
 		clipped_triangles = new_triangle.clip(SIZE)
 
 		for t in range(len(clipped_triangles)):
