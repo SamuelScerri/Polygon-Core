@@ -22,10 +22,10 @@ class Triangle:
 		self.uv_b = uv_b
 		self.uv_c = uv_c
 
-	def matrix_multiply(self, matrix):
-		self.vertex_a.matrix_multiply(matrix)
-		self.vertex_b.matrix_multiply(matrix)
-		self.vertex_c.matrix_multiply(matrix)
+	def matrix_multiply(self, matrix, matrix_first):
+		self.vertex_a.matrix_multiply(matrix, matrix_first)
+		self.vertex_b.matrix_multiply(matrix, matrix_first)
+		self.vertex_c.matrix_multiply(matrix, matrix_first)
 
 	def get_vertex_span(self):
 		vertex_span_1 = (self.vertex_b.x - self.vertex_a.x, self.vertex_b.y - self.vertex_a.y)

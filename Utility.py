@@ -28,7 +28,7 @@ class Utility:
 
 			if values[0] == 'v':
 				self.vertex_data.append(Vertex(
-					float(values[1]), float(values[2]), float(values[3])
+					float(values[1]), float(values[2]), float(values[3]), 1
 				))
 
 			elif values[0] == 'vt':
@@ -57,14 +57,6 @@ class Utility:
 			vertex_a = self.vertex_data[face[0][0] - 1].copy()
 			vertex_b = self.vertex_data[face[0][1] - 1].copy()
 			vertex_c = self.vertex_data[face[0][2] - 1].copy()
-
-			vertex_a.z += 128
-			vertex_b.z += 128
-			vertex_c.z += 128
-
-			vertex_a.x -= 16
-			vertex_b.x -= 16
-			vertex_c.x -= 16
 
 			self.triangle_data.append(Triangle(
 				vertex_a,
