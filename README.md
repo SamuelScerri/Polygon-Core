@@ -4,20 +4,18 @@
 
 
 # Libraries Used:
-  - Numpy: For Fast Matrix Multiplication & Pixel Copying Instructions
-  - Numba: For Caching & Compiling Functions To Increase Performance
+  - Numpy: For The Screen & Depth Buffer
+  - Numba: For Compiling Functions To Increase Performance
   - PyGame: For Displaying The Screen Buffer & To Receive Input
 
 # Current Features:
   - Barycentric Triangle Rasterization
-  - Texture Mapping Support
+  - Perspective Correct Texture Mapping
   - Depth Buffer Support
   - Wavefront OBJ Support
-  - Additive Color Mixing For Triangles
+  - Triangle Clipping
+  - Translation & Rotation Support
 
 # Features That Will Be Added:
-  - Basic Triangle Clipping
   - Multicore Rendering Support (Using Numba)
   - Basic Diffuse Lighing
-  - Translating & Rotation Support For Models
-  - Perspective Correct Texture Mapping
