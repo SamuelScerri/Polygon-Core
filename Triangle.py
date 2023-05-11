@@ -152,11 +152,11 @@ class Triangle:
 				if len(vertex_data) > 0:
 					vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 1, True)
 
-					if len(vertex_data) > 0:
-						vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
+					#if len(vertex_data) > 0:
+					#	vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
 
-					if len(vertex_data) > 0:
-						vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
+					#if len(vertex_data) > 0:
+					#	vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
 
 
 		triangles = []
