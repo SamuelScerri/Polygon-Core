@@ -1,4 +1,3 @@
-import time
 import numpy
 import math
 import pygame
@@ -9,7 +8,7 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (640, 360)
+SIZE = (320, 180)
 
 def quick_matrices_multiply(matrix_1, matrix_2):
 	return [[sum(a*b for a,b in zip(x_row,y_col)) for y_col in zip(*matrix_2)] for x_row in matrix_1]
@@ -92,7 +91,7 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 						depth_buffer[x][y] = depth
 
 @numba.njit
-def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix, rotation):
+def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
 	for triangle in triangles:
 		new_triangle = triangle.copy()
 
@@ -108,6 +107,7 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, mo
 pygame.init()
 
 projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
+pygame.display.set_caption("Polygon Core - Unfinished Build")
 screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
@@ -123,8 +123,13 @@ model.build_triangle_data()
 position = Vertex(0, 0, -64)
 velocity = Vertex(0, 0, 0)
 
+rotation_velocity_x = 0
 rotation_velocity_y = 0
-r = 180
+rotation_velocity_z = 0
+
+rx = 0
+ry = 180
+rz = 0
 
 texture = pygame.surfarray.pixels2d(pygame.image.load("Megaman.png").convert())
 
@@ -138,21 +143,24 @@ while running:
 	velocity = velocity.interpolate(Vertex(
 		(keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]),
 		(keys[pygame.K_UP] - keys[pygame.K_DOWN]),
-		(keys[pygame.K_s] - keys[pygame.K_w])),
+		(keys[pygame.K_z] - keys[pygame.K_x])),
 		.1
 	)
 
+	rotation_velocity_x = lerp(rotation_velocity_x, (keys[pygame.K_s] - keys[pygame.K_w]) * 2, .1)
 	rotation_velocity_y = lerp(rotation_velocity_y, (keys[pygame.K_d] - keys[pygame.K_a]) * 2, .1)
 
 	position.x += velocity.x
 	position.y += velocity.y
 	position.z += velocity.z
 
-	r += rotation_velocity_y
+	rx += rotation_velocity_x
+	ry += rotation_velocity_y
 
-	world_matrix = quick_matrices_multiply(create_translation_matrix(position), create_rotation_matrix(r, 0, 1, 0))
+	world_matrix = quick_matrices_multiply(create_rotation_matrix(rx, 1, 0, 0), create_rotation_matrix(ry, 0, 1, 0))
+	world_matrix = quick_matrices_multiply(create_translation_matrix(position), world_matrix)
 
-	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix), r)
+	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
