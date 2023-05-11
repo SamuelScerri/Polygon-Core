@@ -61,17 +61,18 @@ def create_projection_matrix(fov, near, far, size):
 @numba.njit
 def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 	vertex_span_1, vertex_span_2, span = triangle.get_vertex_span()
-	max_x, min_x, max_y, min_y = triangle.get_boundaries()
-
-	normalized_uv_a = (triangle.uv_a.x / triangle.vertex_a.w, triangle.uv_a.y / triangle.vertex_a.w)
-	normalized_uv_b = (triangle.uv_b.x / triangle.vertex_b.w, triangle.uv_b.y / triangle.vertex_b.w)
-	normalized_uv_c = (triangle.uv_c.x / triangle.vertex_c.w, triangle.uv_c.y / triangle.vertex_c.w)
-
-	inverse_vertex_a = 1 / triangle.vertex_a.w
-	inverse_vertex_b = 1 / triangle.vertex_b.w
-	inverse_vertex_c = 1 / triangle.vertex_c.w
 
 	if span != 0:
+		max_x, min_x, max_y, min_y = triangle.get_boundaries()
+
+		normalized_uv_a = (triangle.uv_a.x / triangle.vertex_a.w, triangle.uv_a.y / triangle.vertex_a.w)
+		normalized_uv_b = (triangle.uv_b.x / triangle.vertex_b.w, triangle.uv_b.y / triangle.vertex_b.w)
+		normalized_uv_c = (triangle.uv_c.x / triangle.vertex_c.w, triangle.uv_c.y / triangle.vertex_c.w)
+
+		inverse_vertex_a = 1 / triangle.vertex_a.w
+		inverse_vertex_b = 1 / triangle.vertex_b.w
+		inverse_vertex_c = 1 / triangle.vertex_c.w		
+
 		for x in range(min_x, max_x + 1):
 			for y in range(min_y, max_y + 1):
 				s, t, w = triangle.get_barycentric_coordinates(vertex_span_1, vertex_span_2, span, x, y)
@@ -108,9 +109,8 @@ pygame.init()
 
 projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
 pygame.display.set_caption("Polygon Core - Unfinished Build")
-screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED | pygame.FULLSCREEN, vsync=True)
 
-screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
 
 running = True
@@ -160,13 +160,14 @@ while running:
 	world_matrix = quick_matrices_multiply(create_rotation_matrix(rx, 1, 0, 0), create_rotation_matrix(ry, 0, 1, 0))
 	world_matrix = quick_matrices_multiply(create_translation_matrix(position), world_matrix)
 
+	screen_buffer = pygame.surfarray.pixels2d(screen)
 	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
+	del screen_buffer
 
-	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
 
 	pygame.display.flip()
-	screen_buffer.fill(0)
+	screen.fill(0)
 	depth_buffer.fill(0)
 
 	clock.tick()
