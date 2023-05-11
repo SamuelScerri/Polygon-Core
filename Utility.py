@@ -58,6 +58,10 @@ class Utility:
 			vertex_b = self.vertex_data[face[0][1] - 1].copy()
 			vertex_c = self.vertex_data[face[0][2] - 1].copy()
 
+			#vertex_a.z += 16
+			#vertex_b.z += 16
+			#vertex_c.z += 16
+
 			self.triangle_data.append(Triangle(
 				vertex_a,
 				vertex_b,

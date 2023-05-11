@@ -17,6 +17,14 @@ def quick_matrices_multiply(matrix_1, matrix_2):
 def lerp(a, b, factor):
 	return a * (1 - t) + b * t
 
+def create_identity_matrix():
+	return (
+		(1.0, 0.0, 0.0, 0.0),
+		(0.0, 1.0, 0.0, 0.0),
+		(0.0, 0.0, 1.0, 0.0),
+		(0.0, 0.0, 0.0, 1.0)
+	)
+
 def create_translation_matrix(translation):
 	return(
 		(1.0, 0.0, 0.0, translation.x),
@@ -31,17 +39,17 @@ def create_rotation_matrix(amount, x, y, z):
 
 	#return(
 	#	(1.0, 0.0, 0.0, 0.0),
-	#	(0.0, c, -s, 0.0),
-	#	(0.0, s, c, 8.0),
+	##	(0.0, c, -s, 0.0),
+	#	(0.0, s, c, 0.0),
 	#	(0.0, 0.0, 0.0, 1.0)
 	#)
 
-	#return(
-	#	((1 - c) * x * x + c, (1 - c) * x * y - s * z, (1 - c) * x * z + s * y, 0),
-	#	((1 - c) * x * y + s * z, (1 - c) * y * y + c, (1 - c) * y * z - s * x, 0),
-	#	((1 - c) * x * z - s * y, (1 - c) * y * z + s * x, (1 - c) * z * z + c, 0),
-	#	(0.0, 0.0, 0.0, 1.0)
-	#)
+	return(
+		((1.0 - c) * x * x + c, (1.0 - c) * x * y - s * z, (1.0 - c) * x * z + s * y, 0.0),
+		((1.0 - c) * x * y + s * z, (1.0 - c) * y * y + c, (1.0 - c) * y * z - s * x, 0.0),
+		((1.0 - c) * x * z - s * y, (1.0 - c) * y * z + s * x, (1.0 - c) * z * z + c, 0.0),
+		(0.0, 0.0, 0.0, 1.0)
+	)
 
 	#return(
 	#	(0.0, -z, )
@@ -62,7 +70,7 @@ def create_projection_matrix(fov, near, far, size):
 	left = bottom
 
 	return (
-		(1 / right, 0, 0, 0),
+		((1 / right), 0, 0, 0),
 		(0, 1 / top, 0, 0),
 		(0, 0,-(far + near) / (far - near),-(2 * far * near) / (far - near)),
 		(0, 0, -1, 0)
@@ -101,13 +109,18 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 						depth_buffer[x][y] = depth
 
 @numba.njit
-def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, world_matrix):
+def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
 	for triangle in triangles:
 		new_triangle = triangle.copy()	
-		
-		#for queue in transformation_queue:
-		new_triangle.matrix_multiply(world_matrix, True)
 
+		#for queue in transformation_queue:
+		#	new_triangle.matrix_multiply(queue, True)
+
+		#new_triangle.vertex_a.z += 16
+		#new_triangle.vertex_b.z += 16
+		#new_triangle.vertex_c.z += 16
+
+		new_triangle.matrix_multiply(model_matrix, True)
 		new_triangle.matrix_multiply(matrix, True)
 		clipped_triangles = new_triangle.clip(screen_buffer.shape)
 
@@ -130,7 +143,7 @@ font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 model = Utility("player.obj")
 model.build_triangle_data()
 
-z = 3
+z = 64
 x = 0
 y = 0
 r = 0
@@ -151,18 +164,23 @@ while running:
 
 	r += (keys[pygame.K_d] - keys[pygame.K_a]) * .4
 
+	#print(r)
+
 	transformation_queue = []
 
-	rv = Vertex(1, 1, 1)
-	rv = rv.normalized()
+	#transformation_queue.append(create_rotation_matrix(r, 1, 0, 0))
+	#transformation_queue.append(create_translation_matrix(Vertex(x, y, z)))
+	
 
-	p = Vertex(x, y, z)
-
-	cross = rv.cross(p)
-
-	world_matrix = create_translation_matrix(Vertex(x, y, z))
-	#world_matrix = quick_matrices_multiply(create_rotation_matrix(r, 1, 0, 0), world_matrix)
+	world_matrix = create_identity_matrix()
+	world_matrix = quick_matrices_multiply(create_rotation_matrix(r, 0, 1, 0), world_matrix)
 	world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), world_matrix)
+
+	#print(world_matrix)
+
+	#world_matrix = create_translation_matrix(Vertex(x, y, z))
+	#world_matrix = quick_matrices_multiply(world_matrix, create_rotation_matrix(r, 1, 0, 0))
+	#world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), world_matrix)
 	
 	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
 
