@@ -9,7 +9,7 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (320, 180)
+SIZE = (640, 360)
 
 def quick_matrices_multiply(matrix_1, matrix_2):
 	return [[sum(a*b for a,b in zip(x_row,y_col)) for y_col in zip(*matrix_2)] for x_row in matrix_1]
@@ -39,7 +39,7 @@ def create_rotation_matrix(amount, x, y, z):
 
 	#return(
 	#	(1.0, 0.0, 0.0, 0.0),
-	##	(0.0, c, -s, 0.0),
+	#	(0.0, c, -s, 0.0),
 	#	(0.0, s, c, 0.0),
 	#	(0.0, 0.0, 0.0, 1.0)
 	#)
@@ -70,9 +70,9 @@ def create_projection_matrix(fov, near, far, size):
 	left = bottom
 
 	return (
-		((1 / right), 0, 0, 0),
-		(0, 1 / top, 0, 0),
-		(0, 0,-(far + near) / (far - near),-(2 * far * near) / (far - near)),
+		((2 * near) / (right - left), 0, (right + left) / (right - left), 0),
+		(0, (2 * near) / (top - bottom), (top + bottom) / (top - bottom), 0),
+		(0, 0, (- 1 * (far + near)) / (far - near), (-2 * far * near) / (far - near)),
 		(0, 0, -1, 0)
 	)
 
@@ -98,12 +98,13 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 				#If The Current Point Is In The Triangle, Then We Render It
 				if s > 0 and t > 0 and s + t <= 1:
 					depth = w * inverse_vertex_a + s * inverse_vertex_b + t * inverse_vertex_c
+					#print(depth)
 
 					if depth > depth_buffer[x][y]:
 						#Texture Mapping With Perspective Correction
 						uv_x = w * normalized_uv_a[0] + s * normalized_uv_b[0] + t * normalized_uv_c[0]
 						uv_y = w * normalized_uv_a[1] + s * normalized_uv_b[1] + t * normalized_uv_c[1]
-						z = 1 / (w * inverse_vertex_a + s * inverse_vertex_b + t * inverse_vertex_c)
+						z = 1 / depth
 
 						screen_buffer[x][y] = texture[int(uv_x * texture.shape[0] * z)][int(1 - uv_y * texture.shape[1] * z)]
 						depth_buffer[x][y] = depth
@@ -111,17 +112,10 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 @numba.njit
 def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
 	for triangle in triangles:
-		new_triangle = triangle.copy()	
-
-		#for queue in transformation_queue:
-		#	new_triangle.matrix_multiply(queue, True)
-
-		#new_triangle.vertex_a.z += 16
-		#new_triangle.vertex_b.z += 16
-		#new_triangle.vertex_c.z += 16
-
+		new_triangle = triangle.copy()
 		new_triangle.matrix_multiply(model_matrix, True)
-		new_triangle.matrix_multiply(matrix, True)
+		new_triangle.matrix_multiply(matrix, False)
+
 		clipped_triangles = new_triangle.clip(screen_buffer.shape)
 
 		for t in range(len(clipped_triangles)):
@@ -130,7 +124,7 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, mo
 
 pygame.init()
 
-projection_matrix = create_projection_matrix(90, .1, 100, SIZE)
+projection_matrix = create_projection_matrix(60, .1, 1000, SIZE)
 screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
@@ -140,10 +134,10 @@ running = True
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 
-model = Utility("player.obj")
+model = Utility("Cube.obj")
 model.build_triangle_data()
 
-z = 64
+z = 16
 x = 0
 y = 0
 r = 0
@@ -162,26 +156,10 @@ while running:
 	y += (keys[pygame.K_UP] - keys[pygame.K_DOWN]) * .1
 	z += (keys[pygame.K_w] - keys[pygame.K_s]) * .1
 
-	r += (keys[pygame.K_d] - keys[pygame.K_a]) * .4
+	r += (keys[pygame.K_d] - keys[pygame.K_a])
 
-	#print(r)
+	world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), create_rotation_matrix(r, 1, 0, 0))
 
-	transformation_queue = []
-
-	#transformation_queue.append(create_rotation_matrix(r, 1, 0, 0))
-	#transformation_queue.append(create_translation_matrix(Vertex(x, y, z)))
-	
-
-	world_matrix = create_identity_matrix()
-	world_matrix = quick_matrices_multiply(create_rotation_matrix(r, 0, 1, 0), world_matrix)
-	world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), world_matrix)
-
-	#print(world_matrix)
-
-	#world_matrix = create_translation_matrix(Vertex(x, y, z))
-	#world_matrix = quick_matrices_multiply(world_matrix, create_rotation_matrix(r, 1, 0, 0))
-	#world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), world_matrix)
-	
 	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
