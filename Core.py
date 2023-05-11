@@ -93,6 +93,8 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 
 @numba.njit
 def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
+	#print(triangles)
+
 	for triangle in triangles:
 		new_triangle = triangle.copy()
 
@@ -109,7 +111,7 @@ pygame.init()
 
 projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
 pygame.display.set_caption("Polygon Core - Unfinished Build")
-screen = pygame.display.set_mode(SIZE, pygame.SCALED | pygame.FULLSCREEN, vsync=True)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=False)
 
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
 

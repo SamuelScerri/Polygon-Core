@@ -2,21 +2,16 @@ from Vertex import Vertex
 from Triangle import Triangle
 
 from UV import UV
-from numba.experimental import jitclass
-import numba
-from typing import List
-
-from functools import cache
+import numba.typed
 
 class Utility:
-	@cache
 	def __init__(self, filename):
 		self.vertex_data = []
 		self.uv_data = []
 		self.face_data = []
 		self.filename = filename
 
-		self.triangle_data = []
+		self.triangle_data = numba.typed.List()
 
 		for line in open(filename, "r"):
 			if line.startswith('#'):
@@ -51,7 +46,6 @@ class Utility:
 
 				self.face_data.append((faces, uv_data))
 
-	@cache
 	def build_triangle_data(self):
 		for face in self.face_data:
 			vertex_a = self.vertex_data[face[0][0] - 1].copy()
@@ -67,7 +61,5 @@ class Utility:
 				self.uv_data[face[1][1] - 1],
 				self.uv_data[face[1][2] - 1]
 			))
-
-		self.triangle_data = tuple(self.triangle_data)
 
 		print("Successfully Built Triangle Data For:", self.filename)
