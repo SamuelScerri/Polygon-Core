@@ -37,30 +37,12 @@ def create_rotation_matrix(amount, x, y, z):
 	c = math.cos(math.radians(amount))
 	s = math.sin(math.radians(amount))
 
-	#return(
-	#	(1.0, 0.0, 0.0, 0.0),
-	#	(0.0, c, -s, 0.0),
-	#	(0.0, s, c, 0.0),
-	#	(0.0, 0.0, 0.0, 1.0)
-	#)
-
 	return(
 		((1.0 - c) * x * x + c, (1.0 - c) * x * y - s * z, (1.0 - c) * x * z + s * y, 0.0),
 		((1.0 - c) * x * y + s * z, (1.0 - c) * y * y + c, (1.0 - c) * y * z - s * x, 0.0),
 		((1.0 - c) * x * z - s * y, (1.0 - c) * y * z + s * x, (1.0 - c) * z * z + c, 0.0),
 		(0.0, 0.0, 0.0, 1.0)
 	)
-
-	#return(
-	#	(0.0, -z, )
-	#)
-
-	#return(
-	#	(1 - 2 * y * y - 2 * z * z, 2 * x * y - 2 * s * z, 2 * x * z + 2 * s * y, 0.0),
-	#	(2 * x * y + 2 * s * z, 1 - 2 * x * x - 2 * z * z, 2 * y * z - 2 * s * x, 0.0),
-	#	(2 * x * z - 2 * s * y, 2 * y * z + 2 * s * x, 1 - 2 * x * x - 2 * y * y, 0.0),
-	#	(0.0, 0.0, 0.0, 1.0)
-	#)
 
 def create_projection_matrix(fov, near, far, size):
 	aspect_ratio = size[0] / size[1]
@@ -110,9 +92,10 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 						depth_buffer[x][y] = depth
 
 @numba.njit
-def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
+def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix, rotation):
 	for triangle in triangles:
 		new_triangle = triangle.copy()
+
 		new_triangle.matrix_multiply(model_matrix, True)
 		new_triangle.matrix_multiply(matrix, False)
 
@@ -124,7 +107,7 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, mo
 
 pygame.init()
 
-projection_matrix = create_projection_matrix(60, .1, 1000, SIZE)
+projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
 screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
 
 screen_buffer = numpy.zeros(SIZE, dtype=numpy.int32)
@@ -137,7 +120,7 @@ font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 model = Utility("Cube.obj")
 model.build_triangle_data()
 
-z = 16
+z = -2
 x = 0
 y = 0
 r = 0
@@ -160,7 +143,7 @@ while running:
 
 	world_matrix = quick_matrices_multiply(create_translation_matrix(Vertex(x, y, z)), create_rotation_matrix(r, 1, 0, 0))
 
-	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
+	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix), r)
 
 	pygame.surfarray.blit_array(pygame.display.get_surface(), screen_buffer)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))

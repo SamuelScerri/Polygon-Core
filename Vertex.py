@@ -18,17 +18,22 @@ class Vertex:
 		return(self.x, self.y, self.z, self.w)
 
 	def matrix_multiply(self, matrix, matrix_first):
+		temp_x = self.x
+		temp_y = self.y
+		temp_z = self.z
+		temp_w = self.w
+
 		if matrix_first == False:
-			self.x = (self.x * matrix[0][0]) + (self.y * matrix[1][0]) + (self.z * matrix[2][0]) + (self.w * matrix[3][0])
-			self.y = (self.x * matrix[0][1]) + (self.y * matrix[1][1]) + (self.z * matrix[2][1]) + (self.w * matrix[3][1])
-			self.z = (self.x * matrix[0][2]) + (self.y * matrix[1][2]) + (self.z * matrix[2][2]) + (self.w * matrix[3][2])
-			self.w = (self.x * matrix[0][3]) + (self.y * matrix[1][3]) + (self.z * matrix[2][3]) + (self.w * matrix[3][3])
+			self.x = (temp_x * matrix[0][0]) + (temp_y * matrix[1][0]) + (temp_z * matrix[2][0]) + (temp_w * matrix[3][0])
+			self.y = (temp_x * matrix[0][1]) + (temp_y * matrix[1][1]) + (temp_z * matrix[2][1]) + (temp_w * matrix[3][1])
+			self.z = (temp_x * matrix[0][2]) + (temp_y * matrix[1][2]) + (temp_z * matrix[2][2]) + (temp_w * matrix[3][2])
+			self.w = (temp_x * matrix[0][3]) + (temp_y * matrix[1][3]) + (temp_z * matrix[2][3]) + (temp_w * matrix[3][3])
 
 		else:
-			self.x = (self.x * matrix[0][0]) + (self.y * matrix[0][1]) + (self.z * matrix[0][2]) + (self.w * matrix[0][3]) 
-			self.y = (self.x * matrix[1][0]) + (self.y * matrix[1][1]) + (self.z * matrix[1][2]) + (self.w * matrix[1][3]) 
-			self.z = (self.x * matrix[2][0]) + (self.y * matrix[2][1]) + (self.z * matrix[2][2]) + (self.w * matrix[2][3]) 
-			self.w = (self.x * matrix[3][0]) + (self.y * matrix[3][1]) + (self.z * matrix[3][2]) + (self.w * matrix[3][3])
+			self.x = (temp_x * matrix[0][0]) + (temp_y * matrix[0][1]) + (temp_z * matrix[0][2]) + (temp_w * matrix[0][3]) 
+			self.y = (temp_x * matrix[1][0]) + (temp_y * matrix[1][1]) + (temp_z * matrix[1][2]) + (temp_w * matrix[1][3]) 
+			self.z = (temp_x * matrix[2][0]) + (temp_y * matrix[2][1]) + (temp_z * matrix[2][2]) + (temp_w * matrix[2][3]) 
+			self.w = (temp_x * matrix[3][0]) + (temp_y * matrix[3][1]) + (temp_z * matrix[3][2]) + (temp_w * matrix[3][3])
 
 	def convert_to_screen_space(self, size):
 		self.x = ((self.x + 1) * size[0]) / 2
