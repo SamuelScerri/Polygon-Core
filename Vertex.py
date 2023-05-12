@@ -63,6 +63,9 @@ class Vertex:
 			1
 		)
 
+	def invert(self):
+		return Vertex(-self.x, -self.y, -self.z, self.w)
+
 	def interpolate(self, vertex, factor):
 		return Vertex(
 			self.x * (1 - factor) + vertex.x * factor,
