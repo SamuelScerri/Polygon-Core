@@ -48,18 +48,25 @@ class Utility:
 
 	def build_triangle_data(self):
 		for face in self.face_data:
-			vertex_a = self.vertex_data[face[0][0] - 1].copy()
-			vertex_b = self.vertex_data[face[0][1] - 1].copy()
-			vertex_c = self.vertex_data[face[0][2] - 1].copy()
-			
 			self.triangle_data.append(Triangle(
-				vertex_a,
-				vertex_b,
-				vertex_c,
+				self.vertex_data[face[0][0] - 1],
+				self.vertex_data[face[0][1] - 1],
+				self.vertex_data[face[0][2] - 1],
 
 				self.uv_data[face[1][0] - 1],
 				self.uv_data[face[1][1] - 1],
 				self.uv_data[face[1][2] - 1]
+			))
+
+			if len(face[0]) > 3:
+				self.triangle_data.append(Triangle(
+						self.vertex_data[face[0][0] - 1],
+						self.vertex_data[face[0][2] - 1],
+						self.vertex_data[face[0][3] - 1],
+
+						self.uv_data[face[1][0] - 1],
+						self.uv_data[face[1][1] - 1],
+						self.uv_data[face[1][2] - 1]
 			))
 
 		print("Successfully Built Triangle Data For:", self.filename)

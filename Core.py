@@ -121,7 +121,7 @@ pygame.init()
 
 projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
 pygame.display.set_caption("Polygon Core - Unfinished Build")
-screen = pygame.display.set_mode(SIZE, pygame.SCALED | pygame.FULLSCREEN, vsync=True)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
 
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
 
@@ -130,7 +130,7 @@ clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 
 model = Utility("Megaman.obj")
-megaman_model = Utility("Teapot.obj")
+megaman_model = Utility("Monkey.obj")
 
 model.build_triangle_data()
 megaman_model.build_triangle_data()
