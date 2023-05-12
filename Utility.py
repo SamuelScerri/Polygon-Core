@@ -65,8 +65,8 @@ class Utility:
 						self.vertex_data[face[0][3] - 1],
 
 						self.uv_data[face[1][0] - 1],
-						self.uv_data[face[1][1] - 1],
-						self.uv_data[face[1][2] - 1]
+						self.uv_data[face[1][2] - 1],
+						self.uv_data[face[1][3] - 1]
 			))
 
 		print("Successfully Built Triangle Data For:", self.filename)

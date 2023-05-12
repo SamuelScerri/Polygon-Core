@@ -129,11 +129,11 @@ running = True
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 
-model = Utility("Megaman.obj")
-megaman_model = Utility("Monkey.obj")
+monkey = Utility("Monkey.obj")
+car = Utility("Car.obj")
 
-model.build_triangle_data()
-megaman_model.build_triangle_data()
+car.build_triangle_data()
+monkey.build_triangle_data()
 
 position = Vertex(0, 0, 0)
 velocity = Vertex(0, 0, 0)
@@ -150,8 +150,8 @@ rx = 0
 ry = 180
 rz = 0
 
-texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
-megaman_texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
+monkey_texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
+car_texture = pygame.surfarray.pixels2d(pygame.image.load("Car.png").convert())
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 
@@ -190,14 +190,19 @@ while running:
 	rx += 1
 	ry += 1
 
-	world_matrix = quick_matrices_multiply(create_identity_matrix(), create_rotation_matrix(ry, 0, 1, 0))
-	#world_matrix = quick_matrices_multiply(create_translation_matrix(position), world_matrix)
-	world_matrix = quick_matrices_multiply(create_translation_matrix(camera.invert()), world_matrix)
-	world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_y, 0, 1, 0), world_matrix)
-	world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_x, 1, 0, 0), world_matrix)
+	car_world_matrix = quick_matrices_multiply(create_identity_matrix(), create_rotation_matrix(ry, 0, 1, 0))
+	monkey_world_matrix = quick_matrices_multiply(create_identity_matrix(), create_translation_matrix(Vertex(6, 0, 0)))
 
-	#render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
-	render_triangles(megaman_model.triangle_data, megaman_texture, pygame.surfarray.pixels2d(screen), depth_buffer, projection_matrix, tuple(world_matrix))
+	car_world_matrix = quick_matrices_multiply(create_translation_matrix(camera.invert()), car_world_matrix)
+	car_world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_y, 0, 1, 0), car_world_matrix)
+	car_world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_x, 1, 0, 0), car_world_matrix)
+
+	monkey_world_matrix = quick_matrices_multiply(create_translation_matrix(camera.invert()), monkey_world_matrix)
+	monkey_world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_y, 0, 1, 0), monkey_world_matrix)
+	monkey_world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_x, 1, 0, 0), monkey_world_matrix)
+
+	render_triangles(car.triangle_data, car_texture, pygame.surfarray.pixels2d(screen), depth_buffer, projection_matrix, tuple(car_world_matrix))
+	render_triangles(monkey.triangle_data, monkey_texture, pygame.surfarray.pixels2d(screen), depth_buffer, projection_matrix, tuple(monkey_world_matrix))
 
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
 
