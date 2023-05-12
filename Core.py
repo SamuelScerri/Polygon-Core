@@ -121,7 +121,7 @@ pygame.init()
 
 projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
 pygame.display.set_caption("Polygon Core - Unfinished Build")
-screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=False)
+screen = pygame.display.set_mode(SIZE, pygame.SCALED | pygame.FULLSCREEN, vsync=True)
 
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
 
@@ -129,8 +129,8 @@ running = True
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Monospace" , 24 , bold=False)
 
-model = Utility("Teapot.obj")
-megaman_model = Utility("Megaman.obj")
+model = Utility("Megaman.obj")
+megaman_model = Utility("Teapot.obj")
 
 model.build_triangle_data()
 megaman_model.build_triangle_data()
@@ -138,7 +138,7 @@ megaman_model.build_triangle_data()
 position = Vertex(0, 0, 0)
 velocity = Vertex(0, 0, 0)
 
-camera = Vertex(32, 0, 64)
+camera = Vertex(0, 0, 8)
 camera_rotation_y = 0
 camera_rotation_x = 0
 
@@ -151,7 +151,7 @@ ry = 180
 rz = 0
 
 texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
-megaman_texture = pygame.surfarray.pixels2d(pygame.image.load("Megaman.png").convert())
+megaman_texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
 
@@ -174,17 +174,12 @@ while running:
 	#)
 
 
-
-	rotation_velocity_x = lerp(rotation_velocity_x, (keys[pygame.K_DOWN] - keys[pygame.K_UP]), .1)
-	rotation_velocity_y = lerp(rotation_velocity_y, (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]), .1)
-
-	camera_rotation_y += rotation_velocity_y
-	camera_rotation_x += rotation_velocity_x
+	camera_rotation_y += (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT])
+	camera_rotation_x += (keys[pygame.K_DOWN] - keys[pygame.K_UP])
 
 	camera.x += math.cos(math.radians(camera_rotation_y + 90)) * math.cos(math.radians(camera_rotation_x)) * (keys[pygame.K_s] - keys[pygame.K_w]) 
 	camera.z += math.sin(math.radians(camera_rotation_y + 90)) * math.cos(math.radians(camera_rotation_x)) * (keys[pygame.K_s] - keys[pygame.K_w])
 	camera.y += math.sin(math.radians(camera_rotation_x)) * (keys[pygame.K_s] - keys[pygame.K_w]) 
-
 	camera.x += math.cos(math.radians(camera_rotation_y)) * (keys[pygame.K_d] - keys[pygame.K_a]) 
 	camera.z += math.sin(math.radians(camera_rotation_y)) * (keys[pygame.K_d] - keys[pygame.K_a]) 
 
@@ -192,19 +187,17 @@ while running:
 	position.y += velocity.y
 	position.z += velocity.z
 
-	#rx += rotation_velocity_x
-	#ry += rotation_velocity_y
+	rx += 1
+	ry += 1
 
-	world_matrix = quick_matrices_multiply(create_rotation_matrix(rx, 1, 0, 0), create_rotation_matrix(ry, 0, 1, 0))
+	world_matrix = quick_matrices_multiply(create_identity_matrix(), create_rotation_matrix(ry, 0, 1, 0))
 	#world_matrix = quick_matrices_multiply(create_translation_matrix(position), world_matrix)
 	world_matrix = quick_matrices_multiply(create_translation_matrix(camera.invert()), world_matrix)
 	world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_y, 0, 1, 0), world_matrix)
 	world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_x, 1, 0, 0), world_matrix)
 
-	screen_buffer = pygame.surfarray.pixels2d(screen)
 	#render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
-	render_triangles(megaman_model.triangle_data, megaman_texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
-	del screen_buffer
+	render_triangles(megaman_model.triangle_data, megaman_texture, pygame.surfarray.pixels2d(screen), depth_buffer, projection_matrix, tuple(world_matrix))
 
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
 
