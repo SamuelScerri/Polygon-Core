@@ -63,6 +63,14 @@ class Vertex:
 			1
 		)
 
+	def subtract(self, vertex):
+		return Vertex(
+			self.x - vertex.x,
+			self.y - vertex.y,
+			self.z - vertex.z,
+			self.w - vertex.w
+		)
+
 	def invert(self):
 		return Vertex(-self.x, -self.y, -self.z, self.w)
 

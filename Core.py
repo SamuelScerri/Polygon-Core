@@ -8,7 +8,7 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (320, 180)
+SIZE = (640, 360)
 
 def quick_matrices_multiply(matrix_1, matrix_2):
 	return [[sum(a*b for a,b in zip(x_row,y_col)) for y_col in zip(*matrix_2)] for x_row in matrix_1]
@@ -101,10 +101,20 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, mo
 		new_triangle.matrix_multiply(model_matrix, True)
 		new_triangle.matrix_multiply(matrix, False)
 
-		clipped_triangles = new_triangle.clip(screen_buffer.shape)
+		cull_test = new_triangle.copy()
+		cull_test.convert_to_normalized_device_coordinates()
 
-		for t in range(len(clipped_triangles)):
-			render_triangle(clipped_triangles[t], texture, screen_buffer, depth_buffer)
+		t1 = cull_test.vertex_b.subtract(cull_test.vertex_a)
+		t2 = cull_test.vertex_c.subtract(cull_test.vertex_a)
+
+		crossed = t1.cross(t2)
+
+		if crossed.z > 0:
+
+			clipped_triangles = new_triangle.clip(screen_buffer.shape)
+
+			for t in range(len(clipped_triangles)):
+				render_triangle(clipped_triangles[t], texture, screen_buffer, depth_buffer)
 
 
 pygame.init()
@@ -154,7 +164,6 @@ while running:
 
 		if event.type == pygame.MOUSEMOTION:
 			mouse_velocity = event.rel
-
 	keys = pygame.key.get_pressed()
 
 	#velocity = velocity.interpolate(Vertex(
@@ -166,11 +175,11 @@ while running:
 
 
 
-	rotation_velocity_x = lerp(rotation_velocity_x, (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * 2, .1)
-	rotation_velocity_y = lerp(rotation_velocity_y, (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * 2, .1)
+	rotation_velocity_x = lerp(rotation_velocity_x, (keys[pygame.K_DOWN] - keys[pygame.K_UP]), .1)
+	rotation_velocity_y = lerp(rotation_velocity_y, (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]), .1)
 
-	camera_rotation_y += mouse_velocity[0]
-	camera_rotation_x += mouse_velocity[1]
+	camera_rotation_y += rotation_velocity_y
+	camera_rotation_x += rotation_velocity_x
 
 	camera.x += math.cos(math.radians(camera_rotation_y + 90)) * math.cos(math.radians(camera_rotation_x)) * (keys[pygame.K_s] - keys[pygame.K_w]) 
 	camera.z += math.sin(math.radians(camera_rotation_y + 90)) * math.cos(math.radians(camera_rotation_x)) * (keys[pygame.K_s] - keys[pygame.K_w])
@@ -183,8 +192,8 @@ while running:
 	position.y += velocity.y
 	position.z += velocity.z
 
-	rx += rotation_velocity_x
-	ry += rotation_velocity_y
+	#rx += rotation_velocity_x
+	#ry += rotation_velocity_y
 
 	world_matrix = quick_matrices_multiply(create_rotation_matrix(rx, 1, 0, 0), create_rotation_matrix(ry, 0, 1, 0))
 	#world_matrix = quick_matrices_multiply(create_translation_matrix(position), world_matrix)
@@ -193,7 +202,7 @@ while running:
 	world_matrix = quick_matrices_multiply(create_rotation_matrix(camera_rotation_x, 1, 0, 0), world_matrix)
 
 	screen_buffer = pygame.surfarray.pixels2d(screen)
-	render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
+	#render_triangles(model.triangle_data, texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
 	render_triangles(megaman_model.triangle_data, megaman_texture, screen_buffer, depth_buffer, projection_matrix, tuple(world_matrix))
 	del screen_buffer
 
