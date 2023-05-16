@@ -101,20 +101,16 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, mo
 		new_triangle.matrix_multiply(model_matrix, True)
 		new_triangle.matrix_multiply(matrix, False)
 
-		cull_test = new_triangle.copy()
-		cull_test.convert_to_normalized_device_coordinates()
+		clipped_triangles = new_triangle.clip(screen_buffer.shape)
 
-		t1 = cull_test.vertex_b.subtract(cull_test.vertex_a)
-		t2 = cull_test.vertex_c.subtract(cull_test.vertex_a)
+		for t in clipped_triangles:
+			t1 = t.vertex_b.subtract(t.vertex_a)
+			t2 = t.vertex_c.subtract(t.vertex_a)
 
-		crossed = t1.cross(t2)
+			crossed = t1.cross(t2)
 
-		if crossed.z > 0:
-
-			clipped_triangles = new_triangle.clip(screen_buffer.shape)
-
-			for t in range(len(clipped_triangles)):
-				render_triangle(clipped_triangles[t], texture, screen_buffer, depth_buffer)
+			if crossed.z < 0:
+				render_triangle(t, texture, screen_buffer, depth_buffer)
 
 
 pygame.init()
@@ -210,7 +206,7 @@ while running:
 	screen.fill(0)
 	depth_buffer.fill(0)
 
-	clock.tick()
+	clock.tick(60)
 	mouse_velocity = (0, 0)
 
 pygame.quit()
