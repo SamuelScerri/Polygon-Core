@@ -8,6 +8,22 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
+import cv2
+from cv2 import dnn_superres
+
+# Create an SR object
+sr = dnn_superres.DnnSuperResImpl_create()
+
+# Read image
+#image = cv2.imread('./input.png')
+
+# Read the desired model
+path = "LapSRN_x8.pb"
+sr.readModel(path)
+
+# Set the desired model and scale to get correct pre- and post-processing
+sr.setModel("lapsrn", 8)
+
 SIZE = (320, 180)
 
 def quick_matrices_multiply(matrix_1, matrix_2):
@@ -62,7 +78,7 @@ def clamp(num, min_value, max_value):
 	return max(min(num, max_value), min_value)
 
 #This Function Is Responsible Only For Rendering The Triangle
-@numba.njit
+@numba.njit()
 def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 	vertex_span_1, vertex_span_2, span = triangle.get_vertex_span()
 
@@ -95,7 +111,7 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 						screen_buffer[x][y] = texture[int(uv_x * texture.shape[0] * z)][int(1 - uv_y * texture.shape[1] * z)]
 						depth_buffer[x][y] = depth
 
-@numba.njit
+@numba.njit()
 def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
 	for triangle in triangles:
 		new_triangle = triangle.copy()
@@ -123,6 +139,7 @@ pygame.display.set_caption("Polygon Core - Unfinished Build")
 screen = pygame.display.set_mode(SIZE, pygame.RESIZABLE, vsync=True)
 
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
+screen_buffer = numpy.zeros((64, 64), dtype=numpy.uint8)
 
 running = True
 clock = pygame.time.Clock()
@@ -163,14 +180,10 @@ while running:
 
 		if event.type == pygame.MOUSEMOTION:
 			mouse_velocity = event.rel
-
-		if event.type == pygame.WINDOWRESIZED:
-			projection_matrix = create_projection_matrix(60, .1, 100, pygame.surfarray.pixels2d(screen).shape)
-			depth_buffer = numpy.zeros(pygame.surfarray.pixels2d(screen).shape, dtype=numpy.float32)
-			
+		
 	keys = pygame.key.get_pressed()
 
-	
+	projection_matrix = create_projection_matrix(60, .1, 100, pygame.surfarray.pixels2d(screen).shape)
 
 	#velocity = velocity.interpolate(Vertex(
 	#	(keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]),
@@ -210,6 +223,7 @@ while running:
 	render_triangles(car.triangle_data, car_texture, pygame.surfarray.pixels2d(screen), depth_buffer, projection_matrix, tuple(car_world_matrix))
 	render_triangles(monkey.triangle_data, monkey_texture, pygame.surfarray.pixels2d(screen), depth_buffer, projection_matrix, tuple(monkey_world_matrix))
 
+	print(sr.upsample(screen_buffer).shape)
 	screen.blit(font.render("FPS: " + str(clock.get_fps()), False, (255, 255, 255)), (0, 0))
 
 	pygame.display.flip()
