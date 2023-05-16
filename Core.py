@@ -8,7 +8,7 @@ from Vertex import Vertex
 from UV import UV
 from Utility import Utility
 
-SIZE = (640, 360)
+SIZE = (320, 180)
 
 def quick_matrices_multiply(matrix_1, matrix_2):
 	return [[sum(a*b for a,b in zip(x_row,y_col)) for y_col in zip(*matrix_2)] for x_row in matrix_1]
@@ -48,7 +48,7 @@ def create_projection_matrix(fov, near, far, size):
 	top = math.tan(math.radians(fov) / 2)
 	bottom = -top
 	right = top * aspect_ratio
-	left = bottom
+	left = bottom * aspect_ratio
 
 	return (
 		((2 * near) / (right - left), 0, (right + left) / (right - left), 0),
@@ -56,6 +56,10 @@ def create_projection_matrix(fov, near, far, size):
 		(0, 0, (- 1 * (far + near)) / (far - near), (-2 * far * near) / (far - near)),
 		(0, 0, -1, 0)
 	)
+
+@numba.njit
+def clamp(num, min_value, max_value):
+	return max(min(num, max_value), min_value)
 
 #This Function Is Responsible Only For Rendering The Triangle
 @numba.njit
@@ -73,8 +77,8 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 		inverse_vertex_b = 1 / triangle.vertex_b.w
 		inverse_vertex_c = 1 / triangle.vertex_c.w		
 
-		for x in range(min_x, max_x + 1):
-			for y in range(min_y, max_y + 1):
+		for x in range(clamp(min_x - 1, 0, screen_buffer.shape[0]), clamp(max_x + 1, 0, screen_buffer.shape[0])):
+			for y in range(clamp(min_y - 1, 0, screen_buffer.shape[1]), clamp(max_y + 1, 0, screen_buffer.shape[1])):
 				s, t, w = triangle.get_barycentric_coordinates(vertex_span_1, vertex_span_2, span, x, y)
 
 				#If The Current Point Is In The Triangle, Then We Render It
@@ -93,8 +97,6 @@ def render_triangle(triangle, texture, screen_buffer, depth_buffer):
 
 @numba.njit
 def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, model_matrix):
-	#print(triangles)
-
 	for triangle in triangles:
 		new_triangle = triangle.copy()
 
@@ -109,6 +111,7 @@ def render_triangles(triangles, texture, screen_buffer, depth_buffer, matrix, mo
 
 			crossed = t1.cross(t2)
 
+			#Disregard Any Triangle Facing Away From The Camera
 			if crossed.z < 0:
 				render_triangle(t, texture, screen_buffer, depth_buffer)
 
@@ -117,7 +120,7 @@ pygame.init()
 
 projection_matrix = create_projection_matrix(60, .1, 100, SIZE)
 pygame.display.set_caption("Polygon Core - Unfinished Build")
-screen = pygame.display.set_mode(SIZE, pygame.SCALED, vsync=True)
+screen = pygame.display.set_mode(SIZE, pygame.RESIZABLE, vsync=True)
 
 depth_buffer = numpy.zeros(SIZE, dtype=numpy.float32)
 
@@ -148,8 +151,8 @@ rz = 0
 
 monkey_texture = pygame.surfarray.pixels2d(pygame.image.load("Brick.bmp").convert())
 car_texture = pygame.surfarray.pixels2d(pygame.image.load("Car.png").convert())
-pygame.mouse.set_visible(False)
-pygame.event.set_grab(True)
+#pygame.mouse.set_visible(False)
+#pygame.event.set_grab(True)
 
 mouse_velocity = (0, 0)
 
@@ -160,7 +163,14 @@ while running:
 
 		if event.type == pygame.MOUSEMOTION:
 			mouse_velocity = event.rel
+
+		if event.type == pygame.WINDOWRESIZED:
+			projection_matrix = create_projection_matrix(60, .1, 100, pygame.surfarray.pixels2d(screen).shape)
+			depth_buffer = numpy.zeros(pygame.surfarray.pixels2d(screen).shape, dtype=numpy.float32)
+			
 	keys = pygame.key.get_pressed()
+
+	
 
 	#velocity = velocity.interpolate(Vertex(
 	#	(keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]),
@@ -206,7 +216,7 @@ while running:
 	screen.fill(0)
 	depth_buffer.fill(0)
 
-	clock.tick(60)
+	clock.tick()
 	mouse_velocity = (0, 0)
 
 pygame.quit()

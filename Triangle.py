@@ -153,10 +153,10 @@ class Triangle:
 					vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 1, True)
 
 					#if len(vertex_data) > 0:
-					#	vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
+						#vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
 
-					#if len(vertex_data) > 0:
-					#	vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
+						#if len(vertex_data) > 0:
+							#vertex_data, uv_data = self.clip_axis(vertex_data, uv_data, 2, True)
 
 
 		triangles = []
@@ -164,6 +164,8 @@ class Triangle:
 		if len(vertex_data) > 0:
 			for v in vertex_data:
 				v.convert_to_normalized_device_coordinates()
+				#print(v.x, v.y, v.z, v.w)
+
 				v.convert_to_screen_space(size)
 
 			for index in range(len(vertex_data) - 2):
