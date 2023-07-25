@@ -17,5 +17,5 @@
   - Translation & Rotation Support
 
 # Features That Will Be Added:
-  - Multicore Rendering Support (Using Numba)
-  - Basic Diffuse Lighing
+  - Multicore Rendering Support (Using Numba) (OBSOLETE, Polygon Core V2 Implements This)
+  - Basic Diffuse Lighing (OBSOLETE, Polygon Core V2 Might Implement This)
